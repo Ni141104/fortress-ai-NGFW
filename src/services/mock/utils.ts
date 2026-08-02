@@ -7,7 +7,7 @@ export const randomFloat = (min: number, max: number) =>
   Math.random() * (max - min) + min;
 
 export const pick = <T>(items: readonly T[]): T =>
-  items[Math.floor(Math.random() * items.length)];
+  items[Math.floor(Math.random() * items.length)] as T;
 
 export const generateIP = () =>
   `${randomBetween(1, 255)}.${randomBetween(0, 255)}.${randomBetween(0, 255)}.${randomBetween(0, 255)}`;
