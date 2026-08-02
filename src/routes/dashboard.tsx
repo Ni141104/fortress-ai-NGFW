@@ -1,17 +1,35 @@
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Activity, BellRing, Gauge, Radar, Rss, Server } from "lucide-react";
+import {
+  Activity,
+  BellRing,
+  Brain,
+  Bug,
+  FileCode,
+  Gauge,
+  GitBranch,
+  Radar,
+  Rss,
+  Server,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { WidgetCard } from "@/components/layout/WidgetCard";
 import { ActiveThreatMonitor } from "@/components/soc/ActiveThreatMonitor";
 import { AlertCenter } from "@/components/soc/AlertCenter";
 import { DashboardFilters } from "@/components/soc/DashboardFilters";
+import { ExplainableAiDrawer } from "@/components/soc/ExplainableAiDrawer";
+import { FederatedLearningWidget } from "@/components/soc/FederatedLearningWidget";
+import { HoneypotIntelligenceWidget } from "@/components/soc/HoneypotIntelligenceWidget";
 import { IncidentDrawer } from "@/components/soc/IncidentDrawer";
+import { MitreIntelligenceWidget } from "@/components/soc/MitreIntelligenceWidget";
 import { PersonalizationPanel } from "@/components/soc/PersonalizationPanel";
+import { PolicyRepositoryWidget } from "@/components/soc/PolicyRepositoryWidget";
+import { RLIntelligenceWidget } from "@/components/soc/RLIntelligenceWidget";
 import { ServiceStatusList, SystemHealthGrid } from "@/components/soc/SystemHealthGrid";
 import { ThreatIntelFeed } from "@/components/soc/ThreatIntelFeed";
 import { ThreatOverview } from "@/components/soc/ThreatOverview";
-import { SearchTrigger, UnifiedSearch } from "@/components/soc/UnifiedSearch";
+import { UnifiedSearch, SearchTrigger } from "@/components/soc/UnifiedSearch";
+import { ZeroDayIntelligenceWidget } from "@/components/soc/ZeroDayIntelligenceWidget";
 import { useSocData } from "@/hooks/useSocData";
 import { SocProvider, useSoc } from "@/lib/soc-store";
 import { cn } from "@/lib/utils";
@@ -28,7 +46,8 @@ export const Route = createFileRoute("/dashboard")({
       { property: "og:title", content: "Security Operations Center — AI-NGFW" },
       {
         property: "og:description",
-        content: "Live threat posture, detection telemetry and analyst triage in one Blue Team console.",
+        content:
+          "Live threat posture, detection telemetry and analyst triage in one Blue Team console.",
       },
     ],
   }),
@@ -52,8 +71,22 @@ const SPAN_CLASS: Record<1 | 2 | 3, string> = {
 /** Phase 3 SOC — every widget reads one snapshot via useSocData. */
 function SecurityOperationsCenter() {
   const { prefs } = useSoc();
-  const { snapshot, rows, scopedAlerts, scopedIntel, health, services, overview, series } =
-    useSocData();
+  const {
+    snapshot,
+    rows,
+    scopedAlerts,
+    scopedIntel,
+    health,
+    services,
+    overview,
+    series,
+    rlAgent,
+    flSummary,
+    honeypot,
+    mitre,
+    zeroDay,
+    policy,
+  } = useSocData();
 
   const openAlerts = scopedAlerts.filter((a) => a.state === "open").length;
 
@@ -113,6 +146,12 @@ function SecurityOperationsCenter() {
         <AlertCenter alerts={scopedAlerts} />
       </WidgetCard>
     ),
+    rl: <RLIntelligenceWidget agent={rlAgent} />,
+    fl: <FederatedLearningWidget summary={flSummary} />,
+    honeypot: <HoneypotIntelligenceWidget summary={honeypot} />,
+    mitre: <MitreIntelligenceWidget summary={mitre} />,
+    zeroday: <ZeroDayIntelligenceWidget summary={zeroDay} />,
+    policy: <PolicyRepositoryWidget summary={policy} />,
   };
 
   const ordered = [...prefs].sort((a, b) => a.order - b.order).filter((p) => p.visible);
@@ -145,6 +184,7 @@ function SecurityOperationsCenter() {
       </div>
 
       <IncidentDrawer rows={rows} intel={scopedIntel} snapshot={snapshot} />
+      <ExplainableAiDrawer snapshot={snapshot} />
       <UnifiedSearch snapshot={snapshot} rows={rows} alerts={scopedAlerts} />
     </div>
   );
