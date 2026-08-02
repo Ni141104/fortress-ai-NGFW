@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { RoleProvider } from "../lib/role-store";
+import DashboardNav from "../components/dashboard/DashboardNav";
 
 function NotFoundComponent() {
   return (
