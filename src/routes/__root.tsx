@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { RoleProvider } from "../lib/role-store";
+import DashboardNav from "../components/dashboard/DashboardNav";
 
 function NotFoundComponent() {
   return (
@@ -77,14 +79,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "AI-NGFW — AI Next-Generation Firewall Console" },
+      {
+        name: "description",
+        content:
+          "Enterprise AI-powered next-generation firewall console: live traffic, MITRE ATT&CK mapping, RL policy engine and red-team simulation.",
+      },
+      { property: "og:title", content: "AI-NGFW — AI Next-Generation Firewall Console" },
+      {
+        property: "og:description",
+        content:
+          "Live threat detection, MITRE ATT&CK mapping and reinforcement-learning policy enforcement in one console.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -119,8 +127,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <RoleProvider>
+        <div className="cyber-grid min-h-screen bg-background text-foreground">
+          <DashboardNav />
+          <main className="mx-auto max-w-[1920px] px-4 py-6 md:px-6">
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </main>
+        </div>
+      </RoleProvider>
     </QueryClientProvider>
   );
 }
