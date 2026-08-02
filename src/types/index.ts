@@ -80,7 +80,7 @@ export interface LogEntry {
   destinationIp: string;
   action: string;
   confidence: number;
-  mitreTTP?: string;
+  mitreTTP?: string | undefined;
 }
 
 export interface SystemMetric {
@@ -119,7 +119,7 @@ export interface ActiveAttack {
   confidence: number;
   stage: PipelineStageId;
   action: RLAction;
-  campaign?: string;
+  campaign?: string | undefined;
   origin: "external" | "simulated";
 }
 
