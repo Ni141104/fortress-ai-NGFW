@@ -3,11 +3,13 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
+  ListTree,
   Menu,
   Settings,
   Shield,
   Sparkles,
   Swords,
+  Workflow,
   X,
 } from "lucide-react";
 import RoleSwitcher from "./RoleSwitcher";
@@ -16,8 +18,11 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Red Team", href: "/red-team", icon: Swords },
+  { name: "Pipeline", href: "/pipeline", icon: Workflow },
+  { name: "Timeline", href: "/timeline", icon: ListTree },
   { name: "Settings", href: "/settings", icon: Settings },
 ] as const;
+
 
 export default function DashboardNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

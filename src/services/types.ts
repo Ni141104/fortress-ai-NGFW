@@ -21,9 +21,8 @@ import type {
 } from "@/types";
 
 /**
- * Service interfaces consumed by every widget.
- * The mock implementation lives in `services/mock`; swapping in a live
- * HTTP/websocket client is a one-line change in `services/index.ts`.
+ * Phase 1 service contract. Widgets consume this interface — never the mock
+ * modules directly — so a FastAPI-backed implementation drops in unchanged.
  */
 export interface NgfwService {
   traffic: {
@@ -64,6 +63,6 @@ export interface NgfwService {
   simulation: {
     launch(techniqueId: string, targetIp: string): ActiveAttack;
     getQueue(): ActiveAttack[];
-    abort(id: string): void;
+    abort(attackId: string): void;
   };
 }

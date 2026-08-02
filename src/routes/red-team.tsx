@@ -1,26 +1,33 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Crosshair, Swords } from "lucide-react";
+import { Crosshair, ListTree, Settings2, Swords } from "lucide-react";
 import { PageHeader, SectionGrid } from "@/components/layout/PageHeader";
 import { WidgetCard } from "@/components/layout/WidgetCard";
-import { EmptyState, SeverityChip, Tag } from "@/components/ui/cyber";
-import { useLiveData } from "@/hooks/useLiveData";
-import { ngfw } from "@/services";
-import type { ActiveAttack } from "@/types";
+import { AttackCatalog } from "@/components/simulation/AttackCatalog";
+import { AttackConfigForm } from "@/components/simulation/AttackConfigForm";
+import { AttackQueuePanel } from "@/components/simulation/AttackQueuePanel";
+import { LiveTimeline } from "@/components/simulation/LiveTimeline";
+import {
+  SimulationControls,
+  SimulationMetricsStrip,
+} from "@/components/simulation/SimulationControls";
+import { useSimulation } from "@/hooks/useSimulation";
+import { attackService } from "@/services";
+import type { AttackConfig, AttackKind } from "@/types/simulation";
 
 export const Route = createFileRoute("/red-team")({
   head: () => ({
     meta: [
-      { title: "Red Team Simulation Range — AI-NGFW" },
+      { title: "Red Team Portal — AI-NGFW" },
       {
         name: "description",
         content:
-          "Launch MITRE ATT&CK technique simulations against the firewall and watch the AI defense pipeline respond in real time.",
+          "Configure and launch SQL injection, DDoS, DNS tunneling and zero-day attack simulations against the AI firewall pipeline.",
       },
-      { property: "og:title", content: "Red Team Simulation Range — AI-NGFW" },
+      { property: "og:title", content: "Red Team Portal — AI-NGFW" },
       {
         property: "og:description",
-        content: "Launch MITRE ATT&CK simulations and observe autonomous defense responses.",
+        content: "Attack catalog, configuration and queue for AI-NGFW offensive simulations.",
       },
     ],
   }),
@@ -28,106 +35,91 @@ export const Route = createFileRoute("/red-team")({
 });
 
 function RedTeamPage() {
-  const catalog = useLiveData(() => ngfw.mitre.getSimulationCatalog(), [], 0);
-  const [queue, setQueue] = useState<ActiveAttack[]>(() => ngfw.simulation.getQueue());
-  const [target, setTarget] = useState("10.0.4.22");
+  const snapshot = useSimulation();
+  const catalog = useMemo(() => attackService.getCatalog(), []);
 
-  const launch = (techniqueId: string) => {
-    ngfw.simulation.launch(techniqueId, target);
-    setQueue(ngfw.simulation.getQueue());
-  };
+  const [selected, setSelected] = useState<AttackKind>(catalog[0]!.id);
+  const [config, setConfig] = useState<AttackConfig>(() =>
+    attackService.defaultConfig(catalog[0]!.id),
+  );
 
-  const abort = (id: string) => {
-    ngfw.simulation.abort(id);
-    setQueue(ngfw.simulation.getQueue());
+  const definition = useMemo(() => attackService.getDefinition(selected), [selected]);
+
+  const selectAttack = (kind: AttackKind) => {
+    setSelected(kind);
+    setConfig(attackService.defaultConfig(kind));
   };
 
   return (
     <div>
       <PageHeader
         accent="pink"
-        title="Red Team Simulation Range"
-        description="Fire MITRE ATT&CK techniques at the inspection pipeline and verify autonomous containment."
-        actions={
-          <input
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            aria-label="Target IP"
-            className="w-40 rounded-md border border-cyber-pink/30 bg-slate-950/60 px-3 py-1.5 font-mono text-xs text-foreground outline-none focus:border-cyber-pink"
-          />
-        }
+        title="Red Team Portal"
+        description="Build, queue and launch adversary operations against the AI inspection pipeline."
+        actions={<SimulationControls snapshot={snapshot} />}
       />
+
+      <div className="mb-6">
+        <WidgetCard
+          title="Engine Telemetry"
+          subtitle="Published by the centralized simulation engine"
+          icon={<Swords className="h-4 w-4" />}
+          live={snapshot.status === "running"}
+        >
+          <SimulationMetricsStrip snapshot={snapshot} />
+        </WidgetCard>
+      </div>
 
       <SectionGrid className="xl:grid-cols-2">
         <WidgetCard
-          title="Technique Catalog"
-          subtitle="Select a technique to launch"
+          title="Attack Catalog"
+          subtitle="MITRE-mapped adversary techniques"
           icon={<Crosshair className="h-4 w-4" />}
           live={false}
-          isLoading={catalog.isLoading}
-          error={catalog.error}
-          onRetry={catalog.refresh}
+          className="xl:col-span-2"
         >
-          <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
-            {(catalog.data ?? []).map((technique) => (
-              <div
-                key={technique.id}
-                className="flex items-center justify-between gap-3 rounded-md border border-cyber-pink/15 p-3"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Tag>{technique.id}</Tag>
-                    <SeverityChip severity={technique.severity} size="sm" showIcon={false} />
-                  </div>
-                  <p className="mt-1 truncate text-sm font-medium">{technique.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{technique.tactic}</p>
-                </div>
-                <button
-                  onClick={() => launch(technique.id)}
-                  className="shrink-0 rounded-md border border-cyber-pink/40 bg-cyber-pink/10 px-3 py-1.5 text-xs font-semibold text-cyber-pink transition-colors hover:bg-cyber-pink/20"
-                >
-                  Launch
-                </button>
-              </div>
-            ))}
-          </div>
+          <AttackCatalog catalog={catalog} selected={selected} onSelect={selectAttack} />
         </WidgetCard>
 
         <WidgetCard
-          title="Simulation Queue"
-          subtitle="Active offensive operations"
-          icon={<Swords className="h-4 w-4" />}
-          live={queue.length > 0}
+          title="Attack Configuration"
+          subtitle={definition.name}
+          icon={<Settings2 className="h-4 w-4" />}
+          live={false}
         >
-          {queue.length === 0 ? (
-            <EmptyState
-              icon={<Swords className="h-6 w-6" />}
-              title="No simulations running"
-              description="Launch a technique from the catalog to begin."
-            />
-          ) : (
-            <div className="space-y-3">
-              {queue.map((attack) => (
-                <div
-                  key={attack.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-cyber-pink/20 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{attack.technique}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      {attack.sourceIp} → {attack.targetIp}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => abort(attack.id)}
-                    className="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Abort
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <AttackConfigForm
+            definition={definition}
+            config={config}
+            onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
+            onEnqueue={() => attackService.enqueue(selected, config)}
+          />
+        </WidgetCard>
+
+        <WidgetCard
+          title="Attack Queue"
+          subtitle="Queued · Running · Completed · Blocked · Unknown"
+          icon={<Swords className="h-4 w-4" />}
+          live={snapshot.status === "running"}
+          actions={
+            <button
+              onClick={() => attackService.launch()}
+              className="rounded-md border border-cyber-pink/40 bg-cyber-pink/10 px-3 py-1 text-[11px] font-semibold text-cyber-pink transition-colors hover:bg-cyber-pink/20"
+            >
+              Launch
+            </button>
+          }
+        >
+          <AttackQueuePanel queue={snapshot.queue} />
+        </WidgetCard>
+
+        <WidgetCard
+          title="Operation Feed"
+          subtitle="Live events from the shared engine"
+          icon={<ListTree className="h-4 w-4" />}
+          live={snapshot.status === "running"}
+          className="xl:col-span-2"
+        >
+          <LiveTimeline events={snapshot.events} limit={25} />
         </WidgetCard>
       </SectionGrid>
     </div>
