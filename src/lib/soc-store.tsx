@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { AlertState, SocFilters, WidgetPref } from "@/types/soc";
+import type { XaiSubjectKind } from "@/types/ai";
 
 /**
  * Phase 3 SOC UI state: global dashboard filters, per-widget personalization
@@ -28,6 +29,12 @@ export const SOC_WIDGETS: Array<{ id: string; name: string; defaultSpan: 1 | 2 |
   { id: "services", name: "Service Status", defaultSpan: 1 },
   { id: "intel", name: "Threat Intelligence Feed", defaultSpan: 2 },
   { id: "alerts", name: "Alert Center", defaultSpan: 1 },
+  { id: "rl", name: "Reinforcement Learning", defaultSpan: 2 },
+  { id: "fl", name: "Federated Learning", defaultSpan: 1 },
+  { id: "honeypot", name: "Honeypot Intelligence", defaultSpan: 1 },
+  { id: "mitre", name: "MITRE ATT&CK", defaultSpan: 1 },
+  { id: "zeroday", name: "Zero-Day Intelligence", defaultSpan: 2 },
+  { id: "policy", name: "Tier-0 Policy Repository", defaultSpan: 1 },
 ];
 
 const defaultPrefs = (): WidgetPref[] =>
@@ -59,6 +66,11 @@ interface SocContextValue {
 
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+
+  xaiSubjectId: string | null;
+  xaiSubjectKind: XaiSubjectKind;
+  openXai: (id: string, kind: XaiSubjectKind) => void;
+  closeXai: () => void;
 }
 
 const SocContext = createContext<SocContextValue | null>(null);
@@ -78,6 +90,8 @@ export function SocProvider({ children }: { children: ReactNode }) {
   const [alertStates, setAlertStates] = useState<Record<string, AlertState>>({});
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [xaiSubjectId, setXaiSubjectId] = useState<string | null>(null);
+  const [xaiSubjectKind, setXaiSubjectKind] = useState<XaiSubjectKind>("attack");
   const [hydrated, setHydrated] = useState(false);
 
   // Hydrate after mount so SSR markup stays stable.
@@ -157,8 +171,26 @@ export function SocProvider({ children }: { children: ReactNode }) {
       closeIncident: () => setSelectedIncidentId(null),
       searchOpen,
       setSearchOpen,
+      xaiSubjectId,
+      xaiSubjectKind,
+      openXai: (id, kind) => {
+        setXaiSubjectId(id);
+        setXaiSubjectKind(kind);
+      },
+      closeXai: () => setXaiSubjectId(null),
     }),
-    [filters, setFilter, prefs, setPref, moveWidget, alertStates, selectedIncidentId, searchOpen],
+    [
+      filters,
+      setFilter,
+      prefs,
+      setPref,
+      moveWidget,
+      alertStates,
+      selectedIncidentId,
+      searchOpen,
+      xaiSubjectId,
+      xaiSubjectKind,
+    ],
   );
 
   return <SocContext.Provider value={value}>{children}</SocContext.Provider>;

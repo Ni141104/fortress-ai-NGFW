@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useSimulation } from "@/hooks/useSimulation";
+import { useLiveData } from "@/hooks/useLiveData";
 import { useMetricSeries } from "@/hooks/useMetricSeries";
 import { useSoc } from "@/lib/soc-store";
 import {
@@ -12,6 +13,15 @@ import {
   filterIntelFeed,
   filterThreatRows,
 } from "@/lib/soc-selectors";
+import {
+  deriveFlSummary,
+  deriveHoneypotSummary,
+  deriveMitreSummary,
+  derivePolicySummary,
+  deriveRLAgent,
+  deriveZeroDaySummary,
+} from "@/lib/ai-selectors";
+import { ngfw } from "@/services";
 import type { SocAlert } from "@/types/soc";
 
 /**
@@ -46,10 +56,7 @@ export function useSocData() {
   );
 
   const intel = useMemo(() => deriveIntelFeed(snapshot), [snapshot]);
-  const scopedIntel = useMemo(
-    () => filterIntelFeed(intel, filters, rows),
-    [intel, filters, rows],
-  );
+  const scopedIntel = useMemo(() => filterIntelFeed(intel, filters, rows), [intel, filters, rows]);
 
   const health = useMemo(() => deriveHealth(snapshot), [snapshot]);
   const services = useMemo(() => deriveServices(snapshot), [snapshot]);
@@ -67,6 +74,47 @@ export function useSocData() {
 
   const series = useMetricSeries(seriesInput);
 
+  // ---- Phase 4: AI Intelligence view models (derived from the same snapshot) ----
+  const techniques = useLiveData(() => ngfw.mitre.getTechniques(), [], 0);
+  const honeypotSessions = useLiveData(() => ngfw.honeypot.getSessions(12), [], 0);
+  const flClients = useLiveData(() => ngfw.federated.getClients(), [], 0);
+  const flRounds = useLiveData(() => ngfw.federated.getRounds(24), [], 0);
+  const policyHistory = useLiveData(() => ngfw.policy.getHistory(), [], 0);
+  const currentPolicy = useLiveData(() => ngfw.policy.getCurrentVersion(), [], 0);
+
+  const rlAgent = useMemo(() => deriveRLAgent(snapshot), [snapshot]);
+  const flSummary = useMemo(
+    () => deriveFlSummary(snapshot, flClients.data ?? [], flRounds.data ?? []),
+    [snapshot, flClients.data, flRounds.data],
+  );
+  const honeypot = useMemo(
+    () => deriveHoneypotSummary(snapshot, honeypotSessions.data ?? []),
+    [snapshot, honeypotSessions.data],
+  );
+  const mitre = useMemo(
+    () => deriveMitreSummary(snapshot, techniques.data ?? []),
+    [snapshot, techniques.data],
+  );
+  const zeroDay = useMemo(() => deriveZeroDaySummary(snapshot), [snapshot]);
+  const policy = useMemo(
+    () =>
+      derivePolicySummary(
+        snapshot,
+        currentPolicy.data ?? {
+          version: "v4.12.0",
+          publishedAt: new Date().toISOString(),
+          ruleCount: 1240,
+          added: 0,
+          removed: 0,
+          modified: 0,
+          author: "rl-optimizer",
+          rolloutPercent: 100,
+        },
+        policyHistory.data ?? [],
+      ),
+    [snapshot, currentPolicy.data, policyHistory.data],
+  );
+
   return {
     snapshot,
     allRows,
@@ -79,5 +127,11 @@ export function useSocData() {
     services,
     overview,
     series,
+    rlAgent,
+    flSummary,
+    honeypot,
+    mitre,
+    zeroDay,
+    policy,
   };
 }
