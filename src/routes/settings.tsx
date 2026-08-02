@@ -28,7 +28,7 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const { role } = useRole();
-  const policies = useLiveData(() => ngfw.policy.getVersions(), [], 0);
+  const policies = useLiveData(() => ngfw.policy.getHistory(), [], 0);
   const clients = useLiveData(() => ngfw.federated.getClients(), [], 10000);
 
   return (
