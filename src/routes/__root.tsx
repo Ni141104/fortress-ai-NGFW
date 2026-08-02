@@ -127,8 +127,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <RoleProvider>
+        <div className="cyber-grid min-h-screen bg-background text-foreground">
+          <DashboardNav />
+          <main className="mx-auto max-w-[1920px] px-4 py-6 md:px-6">
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </main>
+        </div>
+      </RoleProvider>
     </QueryClientProvider>
   );
 }
