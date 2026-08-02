@@ -63,12 +63,14 @@ function SettingsPage() {
         >
           <div className="space-y-3">
             {(policies.data ?? []).map((version) => (
-              <div key={version.id} className="flex items-center justify-between gap-3">
+              <div key={version.version} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{version.version}</p>
-                  <p className="truncate text-xs text-muted-foreground">{version.summary}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {version.ruleCount} rules · +{version.added} / -{version.removed} · {version.author}
+                  </p>
                 </div>
-                <StatusBadge status={version.status} />
+                <StatusBadge status={version.rolloutPercent >= 100 ? "healthy" : "warning"} />
               </div>
             ))}
           </div>
