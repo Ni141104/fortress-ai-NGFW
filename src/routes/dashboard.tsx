@@ -5,6 +5,7 @@ import { WidgetCard } from "@/components/layout/WidgetCard";
 import { ConfidenceBar, SeverityChip, StatusBadge, TimelineItem } from "@/components/ui/cyber";
 import { useLiveData } from "@/hooks/useLiveData";
 import { ngfw } from "@/services";
+import { useRole } from "@/lib/role-store";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -26,11 +27,12 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const traffic = useLiveData(() => ngfw.traffic.getStats(), [], 3000);
-  const pipeline = useLiveData(() => ngfw.traffic.getPipelineStages(), [], 3000);
-  const timeline = useLiveData(() => ngfw.threats.getTimeline(), [], 5000);
-  const attacks = useLiveData(() => ngfw.threats.getActiveAttacks(), [], 5000);
-  const rl = useLiveData(() => ngfw.rl.getDecisions(), [], 6000);
+  const { role } = useRole();
+  const traffic = useLiveData(() => ngfw.traffic.getStats(role), [role], 3000);
+  const pipeline = useLiveData(() => ngfw.traffic.getPipeline(), [], 3000);
+  const feed = useLiveData(() => ngfw.threats.getTimelineFeed(role), [role], 5000);
+  const attacks = useLiveData(() => ngfw.threats.getActiveAttacks(role), [role], 5000);
+  const rl = useLiveData(() => ngfw.rl.getDecisions(8), [], 6000);
   const health = useLiveData(() => ngfw.system.getHealth(), [], 8000);
 
   return (
@@ -42,19 +44,32 @@ function DashboardPage() {
 
       <SectionGrid>
         <WidgetCard
-          title="Traffic Throughput"
+          title="Traffic Overview"
           subtitle="Ingress / egress inspection"
           icon={<Network className="h-4 w-4" />}
           isLoading={traffic.isLoading}
           error={traffic.error}
           onRetry={traffic.refresh}
-          delay={0}
         >
           <dl className="grid grid-cols-2 gap-4">
-            <Metric label="Throughput" value={`${traffic.data?.throughputMbps ?? 0} Mbps`} />
-            <Metric label="Packets / s" value={`${traffic.data?.packetsPerSecond ?? 0}`} />
-            <Metric label="Active flows" value={`${traffic.data?.activeConnections ?? 0}`} />
-            <Metric label="Blocked" value={`${traffic.data?.blocked ?? 0}`} tone="pink" />
+            {(traffic.data ?? []).map((stat) => (
+              <div key={stat.label}>
+                <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {stat.label}
+                </dt>
+                <dd
+                  className={
+                    stat.status === "danger"
+                      ? "font-mono text-xl font-bold text-cyber-pink"
+                      : stat.status === "warning"
+                        ? "font-mono text-xl font-bold text-cyber-amber"
+                        : "font-mono text-xl font-bold text-cyber-blue"
+                  }
+                >
+                  {stat.value.toLocaleString()}
+                </dd>
+              </div>
+            ))}
           </dl>
         </WidgetCard>
 
@@ -72,7 +87,7 @@ function DashboardPage() {
               <ConfidenceBar
                 key={stage.id}
                 label={`${stage.name} · ${stage.latencyMs}ms`}
-                value={stage.load}
+                value={Math.min(100, stage.throughput / 100)}
                 tone="purple"
               />
             ))}
@@ -90,8 +105,14 @@ function DashboardPage() {
         >
           <div className="space-y-3">
             {(health.data ?? []).map((node) => (
-              <div key={node.id} className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm text-foreground">{node.name}</span>
+              <div key={node.name} className="flex items-center justify-between gap-3">
+                <span className="truncate text-sm text-foreground">
+                  {node.name}{" "}
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {node.value}
+                    {node.unit}
+                  </span>
+                </span>
                 <StatusBadge status={node.status} />
               </div>
             ))}
@@ -102,14 +123,14 @@ function DashboardPage() {
           title="Threat Timeline"
           subtitle="Chronological detections"
           icon={<ShieldAlert className="h-4 w-4" />}
-          isLoading={timeline.isLoading}
-          error={timeline.error}
-          onRetry={timeline.refresh}
+          isLoading={feed.isLoading}
+          error={feed.error}
+          onRetry={feed.refresh}
           className="lg:col-span-2"
           delay={0.15}
         >
           <ul className="max-h-80 overflow-y-auto pr-1">
-            {(timeline.data ?? []).map((event, i, arr) => (
+            {(feed.data ?? []).map((event, i, arr) => (
               <TimelineItem
                 key={event.id}
                 title={event.title}
@@ -156,40 +177,17 @@ function DashboardPage() {
           delay={0.25}
         >
           <div className="space-y-3">
-            {(rl.data ?? []).slice(0, 6).map((decision) => (
+            {(rl.data ?? []).map((decision) => (
               <div key={decision.id} className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-muted-foreground">{decision.state}</span>
-                <StatusBadge status={decision.action} />
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {decision.sourceIp} → {decision.destinationIp}
+                </span>
+                <StatusBadge status={decision.decision} />
               </div>
             ))}
           </div>
         </WidgetCard>
       </SectionGrid>
-    </div>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  tone = "blue",
-}: {
-  label: string;
-  value: string;
-  tone?: "blue" | "pink";
-}) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd
-        className={
-          tone === "pink"
-            ? "font-mono text-xl font-bold text-cyber-pink"
-            : "font-mono text-xl font-bold text-cyber-blue"
-        }
-      >
-        {value}
-      </dd>
     </div>
   );
 }
