@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { ConfidenceBar, SeverityChip, StatusBadge, Tag, TimelineItem } from "@/components/ui/cyber";
 import { PipelineFlow } from "@/components/simulation/PipelineFlow";
+import { usePlatform } from "@/lib/platform-store";
 import { useSoc } from "@/lib/soc-store";
 import type { SimulationSnapshot } from "@/types/simulation";
 import type { IntelEvent, ThreatRow } from "@/types/soc";
@@ -24,6 +25,7 @@ export function IncidentDrawer({
   snapshot: SimulationSnapshot;
 }) {
   const { selectedIncidentId, closeIncident } = useSoc();
+  const { openJourney } = usePlatform();
   const row = rows.find((r) => r.id === selectedIncidentId) ?? null;
 
   const events = useMemo(
@@ -37,10 +39,7 @@ export function IncidentDrawer({
   );
 
   const policies = useMemo(
-    () =>
-      row
-        ? snapshot.events.filter((e) => e.type === "policy" && e.attackId === row.id)
-        : [],
+    () => (row ? snapshot.events.filter((e) => e.type === "policy" && e.attackId === row.id) : []),
     [snapshot.events, row],
   );
 
@@ -63,6 +62,15 @@ export function IncidentDrawer({
                 {row.id} · {row.sourceIp} → {row.target} · {row.environment}
               </SheetDescription>
             </SheetHeader>
+
+            <div className="flex flex-wrap gap-2 px-4">
+              <button
+                onClick={() => openJourney(row.id)}
+                className="rounded-md border border-cyber-purple/40 bg-cyber-purple/10 px-3 py-1.5 text-[11px] font-semibold text-cyber-purple transition-colors hover:bg-cyber-purple/20"
+              >
+                Open journey
+              </button>
+            </div>
 
             <div className="space-y-6 px-4 pb-8">
               <section>
@@ -89,7 +97,11 @@ export function IncidentDrawer({
                   ))}
                 </dl>
                 <div className="mt-3">
-                  <ConfidenceBar label="Detection confidence" value={row.confidence} showPercentage />
+                  <ConfidenceBar
+                    label="Detection confidence"
+                    value={row.confidence}
+                    showPercentage
+                  />
                 </div>
               </section>
 

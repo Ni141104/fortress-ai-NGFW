@@ -1,6 +1,7 @@
 import { Pause, Play, RotateCcw, Repeat, Square, Zap } from "lucide-react";
 import { simulationService } from "@/services";
 import { StatusBadge } from "@/components/ui/cyber";
+import { usePlatform } from "@/lib/platform-store";
 import { cn } from "@/lib/utils";
 import type { SimulationSnapshot, SimulationSpeed } from "@/types/simulation";
 
@@ -11,6 +12,7 @@ const controlClass =
 
 /** Transport controls for the centralized simulation engine. */
 export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot }) {
+  const { updateSettings, setDemoRunning } = usePlatform();
   const { status, speed, metrics } = snapshot;
   const running = status === "running";
   const paused = status === "paused";
@@ -39,7 +41,10 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
       )}
 
       <button
-        className={cn(controlClass, "border-cyber-pink/40 bg-cyber-pink/10 text-cyber-pink hover:bg-cyber-pink/20")}
+        className={cn(
+          controlClass,
+          "border-cyber-pink/40 bg-cyber-pink/10 text-cyber-pink hover:bg-cyber-pink/20",
+        )}
         disabled={!running && !paused}
         onClick={() => simulationService.cancel()}
       >
@@ -51,8 +56,14 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
       </button>
 
       <button
-        className={cn(controlClass, "border-border bg-transparent text-muted-foreground hover:bg-white/5 hover:text-foreground")}
-        onClick={() => simulationService.reset()}
+        className={cn(
+          controlClass,
+          "border-border bg-transparent text-muted-foreground hover:bg-white/5 hover:text-foreground",
+        )}
+        onClick={() => {
+          simulationService.reset();
+          setDemoRunning(false);
+        }}
       >
         <RotateCcw className="h-3.5 w-3.5" /> Reset
       </button>
@@ -62,7 +73,7 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
         {SPEEDS.map((s) => (
           <button
             key={s}
-            onClick={() => simulationService.setSpeed(s)}
+            onClick={() => updateSettings({ simulationSpeed: s })}
             className={cn(
               "rounded px-2 py-1 font-mono text-[11px] font-semibold transition-colors",
               speed === s

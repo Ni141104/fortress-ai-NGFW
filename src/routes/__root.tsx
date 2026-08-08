@@ -12,7 +12,13 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RoleProvider } from "../lib/role-store";
+import { PlatformProvider } from "../lib/platform-store";
+import { useSimulation } from "../hooks/useSimulation";
 import DashboardNav from "../components/dashboard/DashboardNav";
+import { AttackJourneyViewer } from "../components/simulation/AttackJourneyViewer";
+import { CommandCenter } from "../components/simulation/CommandCenter";
+import { NotificationCenter } from "../components/platform/NotificationCenter";
+import { IncidentReportDrawer } from "../components/soc/IncidentReportDrawer";
 
 function NotFoundComponent() {
   return (
@@ -128,14 +134,27 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <RoleProvider>
-        <div className="cyber-grid min-h-screen bg-background text-foreground">
-          <DashboardNav />
-          <main className="mx-auto max-w-[1920px] px-4 py-6 md:px-6">
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </main>
-        </div>
+        <AppWithPlatform />
       </RoleProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppWithPlatform() {
+  const snapshot = useSimulation();
+
+  return (
+    <PlatformProvider snapshot={snapshot}>
+      <div className="cyber-grid min-h-screen bg-background text-foreground">
+        <DashboardNav />
+        <main className="mx-auto max-w-[1920px] px-4 py-6 md:px-6">
+          <Outlet />
+        </main>
+      </div>
+      <AttackJourneyViewer snapshot={snapshot} />
+      <IncidentReportDrawer snapshot={snapshot} />
+      <NotificationCenter />
+      <CommandCenter snapshot={snapshot} />
+    </PlatformProvider>
   );
 }

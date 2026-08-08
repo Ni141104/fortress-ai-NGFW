@@ -1,6 +1,7 @@
-import { Copy, Pause, Play, Repeat, Swords, Trash2, X } from "lucide-react";
+import { Copy, Pause, Play, Repeat, Route, Swords, Trash2, X } from "lucide-react";
 import { attackService } from "@/services";
 import { ConfidenceBar, EmptyState, SeverityChip, StatusBadge, Tag } from "@/components/ui/cyber";
+import { usePlatform } from "@/lib/platform-store";
 import type { AttackRunState, QueuedAttack } from "@/types/simulation";
 
 const stateBadge: Record<AttackRunState, string> = {
@@ -18,6 +19,7 @@ const iconBtn =
 
 /** Attack queue with per-operation lifecycle actions. */
 export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
+  const { openJourney } = usePlatform();
   if (queue.length === 0) {
     return (
       <EmptyState
@@ -67,6 +69,9 @@ export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
             )}
 
             <div className="mt-3 flex flex-wrap gap-2">
+              <button className={iconBtn} onClick={() => openJourney(attack.id)}>
+                <Route className="h-3 w-3" /> Journey
+              </button>
               {attack.state === "running" && (
                 <button className={iconBtn} onClick={() => attackService.pauseAttack(attack.id)}>
                   <Pause className="h-3 w-3" /> Pause

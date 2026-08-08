@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Crosshair, ListTree, Settings2, Swords } from "lucide-react";
+import { Crosshair, Library, ListTree, Settings2, Swords } from "lucide-react";
 import { PageHeader, SectionGrid } from "@/components/layout/PageHeader";
 import { WidgetCard } from "@/components/layout/WidgetCard";
 import { AttackCatalog } from "@/components/simulation/AttackCatalog";
 import { AttackConfigForm } from "@/components/simulation/AttackConfigForm";
 import { AttackQueuePanel } from "@/components/simulation/AttackQueuePanel";
 import { LiveTimeline } from "@/components/simulation/LiveTimeline";
+import { ScenarioLibrary } from "@/components/simulation/ScenarioLibrary";
 import {
   SimulationControls,
   SimulationMetricsStrip,
 } from "@/components/simulation/SimulationControls";
 import { useSimulation } from "@/hooks/useSimulation";
+import { usePlatform } from "@/lib/platform-store";
 import { attackService } from "@/services";
 import type { AttackConfig, AttackKind } from "@/types/simulation";
 
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/red-team")({
 
 function RedTeamPage() {
   const snapshot = useSimulation();
+  const { openJourney } = usePlatform();
   const catalog = useMemo(() => attackService.getCatalog(), []);
 
   const [selected, setSelected] = useState<AttackKind>(catalog[0]!.id);
@@ -48,6 +51,8 @@ function RedTeamPage() {
   const selectAttack = (kind: AttackKind) => {
     setSelected(kind);
     setConfig(attackService.defaultConfig(kind));
+    const queued = snapshot.queue.find((a) => a.kind === kind);
+    if (queued) openJourney(queued.id);
   };
 
   return (
@@ -59,7 +64,7 @@ function RedTeamPage() {
         actions={<SimulationControls snapshot={snapshot} />}
       />
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-6">
         <WidgetCard
           title="Engine Telemetry"
           subtitle="Published by the centralized simulation engine"
@@ -67,6 +72,15 @@ function RedTeamPage() {
           live={snapshot.status === "running"}
         >
           <SimulationMetricsStrip snapshot={snapshot} />
+        </WidgetCard>
+
+        <WidgetCard
+          title="Scenario Library"
+          subtitle="One-click predefined attack scenarios"
+          icon={<Library className="h-4 w-4" />}
+          live={false}
+        >
+          <ScenarioLibrary />
         </WidgetCard>
       </div>
 
@@ -91,7 +105,10 @@ function RedTeamPage() {
             definition={definition}
             config={config}
             onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
-            onEnqueue={() => attackService.enqueue(selected, config)}
+            onEnqueue={() => {
+              const attack = attackService.enqueue(selected, config);
+              openJourney(attack.id);
+            }}
           />
         </WidgetCard>
 

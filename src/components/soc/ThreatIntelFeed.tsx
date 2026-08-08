@@ -3,6 +3,7 @@ import { Rss } from "lucide-react";
 import { ConfidenceBar, EmptyState, SeverityChip, Tag } from "@/components/ui/cyber";
 import { cn } from "@/lib/utils";
 import { useSoc } from "@/lib/soc-store";
+import { usePlatform } from "@/lib/platform-store";
 import type { IntelCategory, IntelEvent } from "@/types/soc";
 
 const CATEGORIES: Array<IntelCategory | "All"> = [
@@ -31,6 +32,7 @@ const categoryTone: Record<string, string> = {
 /** Continuously updating intelligence stream, straight off the event bus. */
 export function ThreatIntelFeed({ events, limit = 60 }: { events: IntelEvent[]; limit?: number }) {
   const { openIncident } = useSoc();
+  const { openJourney } = usePlatform();
   const [category, setCategory] = useState<IntelCategory | "All">("All");
 
   const visible = useMemo(
@@ -69,7 +71,7 @@ export function ThreatIntelFeed({ events, limit = 60 }: { events: IntelEvent[]; 
           {visible.map((event) => (
             <li key={event.id}>
               <button
-                onClick={() => event.attackId && openIncident(event.attackId)}
+                onClick={() => event.attackId && openJourney(event.attackId)}
                 disabled={!event.attackId}
                 className={cn(
                   "w-full rounded-lg border border-cyber-blue/15 bg-slate-950/40 px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue/60",

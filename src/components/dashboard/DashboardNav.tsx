@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import RoleSwitcher from "./RoleSwitcher";
+import { DemoModeButton } from "@/components/simulation/ScenarioLibrary";
+import { NotificationBell } from "@/components/platform/NotificationCenter";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -82,6 +84,10 @@ export default function DashboardNav() {
 
           {/* Role + System Status */}
           <div className="flex items-center gap-3">
+            <div className="hidden md:block">
+              <DemoModeButton />
+            </div>
+            <NotificationBell />
             <RoleSwitcher />
             <div className="hidden text-right md:block">
               <div className="text-[10px] text-muted-foreground">System Status</div>
@@ -102,6 +108,9 @@ export default function DashboardNav() {
 
         {mobileOpen && (
           <nav className="mt-4 flex flex-col gap-1 lg:hidden">
+            <div className="mb-2 px-4">
+              <DemoModeButton className="w-full justify-center" />
+            </div>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (

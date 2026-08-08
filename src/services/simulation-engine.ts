@@ -22,11 +22,7 @@ import type {
   TimelineEvent,
 } from "@/types/simulation";
 import { id, internalIP, pick, randomBetween, randomFloat, PROTOCOLS } from "./mock/utils";
-import {
-  INTENSITY_MULTIPLIER,
-  PIPELINE_STAGES,
-  getAttackDefinition,
-} from "./mock/attack-catalog";
+import { INTENSITY_MULTIPLIER, PIPELINE_STAGES, getAttackDefinition } from "./mock/attack-catalog";
 
 /**
  * Centralized simulation engine — the single source of truth for every widget.
@@ -134,7 +130,9 @@ class SimulationEngine {
       config: { ...config },
       state: "queued",
       progress: 0,
-      sourceIp: config.stealthMode ? internalIP() : `185.${randomBetween(10, 240)}.${randomBetween(0, 255)}.${randomBetween(2, 254)}`,
+      sourceIp: config.stealthMode
+        ? internalIP()
+        : `185.${randomBetween(10, 240)}.${randomBetween(0, 255)}.${randomBetween(2, 254)}`,
       packetsSent: 0,
       packetsBlocked: 0,
       createdAt: new Date().toISOString(),
@@ -142,7 +140,14 @@ class SimulationEngine {
     };
     this.lastConfig = { ...config };
     this.queue = [...this.queue, attack];
-    this.pushEvent(this.attackEvent(attack, "queued", `${attack.name} queued`, `Target ${config.target} · ${config.intensity} intensity · ${config.packetRate} pkt/s`));
+    this.pushEvent(
+      this.attackEvent(
+        attack,
+        "queued",
+        `${attack.name} queued`,
+        `Target ${config.target} · ${config.intensity} intensity · ${config.packetRate} pkt/s`,
+      ),
+    );
     this.emit();
     return attack;
   }
@@ -163,7 +168,9 @@ class SimulationEngine {
     this.queue = [];
     this.packets = [];
     this.packetDwell.clear();
-    this.pushEvent(this.timelineEvent("Queue cleared", "All pending attack operations removed", "low"));
+    this.pushEvent(
+      this.timelineEvent("Queue cleared", "All pending attack operations removed", "low"),
+    );
     this.emit();
   }
 
@@ -180,7 +187,13 @@ class SimulationEngine {
     this.status = "running";
     this.startedAt = new Date().toISOString();
     this.lastQueueSpec = this.queue.map((a) => ({ kind: a.kind, config: { ...a.config } }));
-    this.pushEvent(this.timelineEvent("Simulation started", `${this.queue.length} operation(s) scheduled`, "medium"));
+    this.pushEvent(
+      this.timelineEvent(
+        "Simulation started",
+        `${this.queue.length} operation(s) scheduled`,
+        "medium",
+      ),
+    );
     this.startTimer();
     this.emit();
   }
@@ -228,7 +241,13 @@ class SimulationEngine {
     this.reset();
     spec.forEach((s) => this.enqueue(s.kind, s.config));
     this.lastQueueSpec = spec.map((s) => ({ kind: s.kind, config: { ...s.config } }));
-    this.pushEvent(this.timelineEvent("Replay armed", `${spec.length} operation(s) restored from last run`, "low"));
+    this.pushEvent(
+      this.timelineEvent(
+        "Replay armed",
+        `${spec.length} operation(s) restored from last run`,
+        "low",
+      ),
+    );
     this.start();
   }
 
@@ -262,7 +281,14 @@ class SimulationEngine {
       a.id === attackId ? { ...a, state: "cancelled", finishedAt: new Date().toISOString() } : a,
     );
     this.packets = this.packets.filter((p) => p.attackId !== attackId);
-    this.pushEvent(this.attackEvent(target, "cancelled", `${target.name} cancelled`, "Operation aborted by operator"));
+    this.pushEvent(
+      this.attackEvent(
+        target,
+        "cancelled",
+        `${target.name} cancelled`,
+        "Operation aborted by operator",
+      ),
+    );
     this.emit();
   }
 
@@ -322,9 +348,20 @@ class SimulationEngine {
           startedAt: new Date().toISOString(),
         });
         const started = this.queue.find((a) => a.id === next.id)!;
-        this.pushEvent(this.attackEvent(started, "running", `Attack started — ${started.name}`, `${started.sourceIp} → ${started.config.target}`));
         this.pushEvent(
-          this.threatEventFor(started, `Threat surfaced — ${started.mitreTechniqueId}`, `${started.mitreTactic} technique observed at perimeter`),
+          this.attackEvent(
+            started,
+            "running",
+            `Attack started — ${started.name}`,
+            `${started.sourceIp} → ${started.config.target}`,
+          ),
+        );
+        this.pushEvent(
+          this.threatEventFor(
+            started,
+            `Threat surfaced — ${started.mitreTechniqueId}`,
+            `${started.mitreTactic} technique observed at perimeter`,
+          ),
         );
       }
     }
@@ -342,13 +379,21 @@ class SimulationEngine {
 
     if (
       this.status === "running" &&
-      !this.queue.some((a) => a.state === "running" || a.state === "queued" || a.state === "paused") &&
+      !this.queue.some(
+        (a) => a.state === "running" || a.state === "queued" || a.state === "paused",
+      ) &&
       this.packets.length === 0
     ) {
       this.status = "completed";
       this.stopTimer();
       this.stages = this.stages.map((s) => ({ ...s, status: "idle" }));
-      this.pushEvent(this.timelineEvent("Simulation completed", `${this.metrics.packetsInspected} packets inspected · ${this.metrics.packetsBlocked} blocked`, "medium"));
+      this.pushEvent(
+        this.timelineEvent(
+          "Simulation completed",
+          `${this.metrics.packetsInspected} packets inspected · ${this.metrics.packetsBlocked} blocked`,
+          "medium",
+        ),
+      );
     }
 
     this.emit();
@@ -398,7 +443,12 @@ class SimulationEngine {
 
     if (this.tick % 6 === 0) {
       this.pushEvent(
-        this.packetEventFor(active, this.packets[0]!, "Packet generated", `${spawn} synthetic ${active.kind} packet(s) injected at ${Math.round(active.config.packetRate * mult)} pkt/s`),
+        this.packetEventFor(
+          active,
+          this.packets[0]!,
+          "Packet generated",
+          `${spawn} synthetic ${active.kind} packet(s) injected at ${Math.round(active.config.packetRate * mult)} pkt/s`,
+        ),
       );
     }
   }
@@ -450,7 +500,14 @@ class SimulationEngine {
           if (attack) {
             this.updateAttack(attack.id, { packetsBlocked: attack.packetsBlocked + 1 });
             if (this.tick % 4 === 0) {
-              this.pushEvent(this.timelineEventFor(attack, "Tier-0 adaptive rule matched", `Signature drop on ${packet.protocol} from ${packet.sourceIp}`, "tier0"));
+              this.pushEvent(
+                this.timelineEventFor(
+                  attack,
+                  "Tier-0 adaptive rule matched",
+                  `Signature drop on ${packet.protocol} from ${packet.sourceIp}`,
+                  "tier0",
+                ),
+              );
             }
           }
           return null;
@@ -462,7 +519,14 @@ class SimulationEngine {
         const anomaly = stealth ? randomFloat(0.35, 0.7) : randomFloat(0.55, 0.95);
         this.touchStage("tier1", anomaly > 0.6 ? "escalating" : "clear", anomaly, latency);
         if (anomaly > 0.6 && this.tick % 5 === 0 && attack) {
-          this.pushEvent(this.timelineEventFor(attack, "Isolation Forest triggered", `Anomaly score ${anomaly.toFixed(2)} exceeds contamination threshold`, "tier1"));
+          this.pushEvent(
+            this.timelineEventFor(
+              attack,
+              "Isolation Forest triggered",
+              `Anomaly score ${anomaly.toFixed(2)} exceeds contamination threshold`,
+              "tier1",
+            ),
+          );
         }
         return { ...packet, confidence: anomaly };
       }
@@ -474,7 +538,14 @@ class SimulationEngine {
         this.metrics.avgConfidence = Number((this.confidenceSum / this.confidenceCount).toFixed(3));
         if (attack) this.updateAttack(attack.id, { confidence: conf });
         if (this.tick % 5 === 0 && attack) {
-          this.pushEvent(this.timelineEventFor(attack, "Tier-2 classification", `XGBoost labelled traffic as ${attack.name} (${(conf * 100).toFixed(0)}% confidence)`, "tier2"));
+          this.pushEvent(
+            this.timelineEventFor(
+              attack,
+              "Tier-2 classification",
+              `XGBoost labelled traffic as ${attack.name} (${(conf * 100).toFixed(0)}% confidence)`,
+              "tier2",
+            ),
+          );
         }
         return { ...packet, confidence: conf };
       }
@@ -482,15 +553,33 @@ class SimulationEngine {
         this.touchStage("mitre", "processing", packet.confidence, latency);
         if (attack && this.tick % 6 === 0) {
           this.metrics.threatsDetected += 1;
-          this.pushEvent(this.threatEventFor(attack, "MITRE ATT&CK mapping", `${attack.mitreTechniqueId} · ${attack.mitreTactic}`));
+          this.pushEvent(
+            this.threatEventFor(
+              attack,
+              "MITRE ATT&CK mapping",
+              `${attack.mitreTechniqueId} · ${attack.mitreTactic}`,
+            ),
+          );
         }
         return packet;
       }
       case "rl": {
         const action = this.decide(packet.confidence);
-        this.touchStage("rl", action === "allow" ? "clear" : "escalating", packet.confidence, latency);
+        this.touchStage(
+          "rl",
+          action === "allow" ? "clear" : "escalating",
+          packet.confidence,
+          latency,
+        );
         if (attack && this.tick % 5 === 0) {
-          this.pushEvent(this.timelineEventFor(attack, "RL decision", `Policy agent selected "${action}" (expected reward ${randomFloat(0.4, 0.98).toFixed(2)})`, "rl"));
+          this.pushEvent(
+            this.timelineEventFor(
+              attack,
+              "RL decision",
+              `Policy agent selected "${action}" (expected reward ${randomFloat(0.4, 0.98).toFixed(2)})`,
+              "rl",
+            ),
+          );
         }
         if (attack) this.updateAttack(attack.id, { verdict: action });
         return { ...packet, blocked: action !== "allow" };
@@ -551,8 +640,44 @@ class SimulationEngine {
         `${settled.packetsBlocked.toLocaleString()} of ${settled.packetsSent.toLocaleString()} packets contained`,
       ),
     );
+
+    this.pushEvent(
+      this.timelineEventFor(
+        settled,
+        "Final decision",
+        `Containment verdict finalized as ${state} with ${settled.verdict ?? "allow"} enforcement`,
+        "server",
+      ),
+    );
+
+    this.pushEvent(
+      this.timelineEvent(
+        "Blue Team alert",
+        `${settled.name} escalated to the SOC with MITRE ${settled.mitreTechniqueId} and verdict ${settled.verdict ?? state}`,
+        settled.severity,
+      ),
+    );
+
+    if (settled.verdict === "redirect") {
+      this.pushEvent(
+        this.timelineEventFor(
+          settled,
+          "Honeypot triggered",
+          "Traffic diverted to the decoy honeypot for interactive capture and analyst review",
+          "peo",
+        ),
+      );
+    }
+
     if (state === "blocked") {
-      this.pushEvent(this.timelineEventFor(settled, "Firewall updated", "Tier-0 ruleset synchronized with new RL policy", "peo"));
+      this.pushEvent(
+        this.timelineEventFor(
+          settled,
+          "Firewall updated",
+          "Tier-0 ruleset synchronized with new RL policy",
+          "peo",
+        ),
+      );
     }
   }
 

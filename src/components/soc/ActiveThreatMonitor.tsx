@@ -5,6 +5,7 @@ import { ConfidenceBar, EmptyState, SeverityChip, StatusBadge, Tag } from "@/com
 import { cn } from "@/lib/utils";
 import { SEVERITY_RANK } from "@/lib/soc-selectors";
 import { useSoc } from "@/lib/soc-store";
+import { usePlatform } from "@/lib/platform-store";
 import type { Severity } from "@/types";
 import type { ThreatRow } from "@/types/soc";
 
@@ -25,6 +26,7 @@ const stateTone: Record<string, string> = {
 /** Enterprise threat table — sorting, search, severity filters, expandable rows. */
 export function ActiveThreatMonitor({ rows }: { rows: ThreatRow[] }) {
   const { openIncident } = useSoc();
+  const { openJourney, openReport } = usePlatform();
   const [query, setQuery] = useState("");
   const [severity, setSeverity] = useState<Severity | "all">("all");
   const [sortKey, setSortKey] = useState<SortKey>("startedAt");
@@ -166,8 +168,8 @@ export function ActiveThreatMonitor({ rows }: { rows: ThreatRow[] }) {
                       </td>
                       <td className="px-3 py-2">
                         <button
-                          onClick={() => openIncident(row.id)}
-                          className="text-left font-medium text-foreground transition-colors hover:text-cyber-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue/60"
+                          onClick={() => openJourney(row.id)}
+                          className="text-left font-medium text-foreground transition-colors hover:text-cyber-purple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-purple/60"
                         >
                           {row.name}
                         </button>
@@ -196,12 +198,26 @@ export function ActiveThreatMonitor({ rows }: { rows: ThreatRow[] }) {
                         {new Date(row.startedAt).toLocaleTimeString()}
                       </td>
                       <td className="px-3 py-2">
-                        <button
-                          onClick={() => openIncident(row.id)}
-                          className="rounded-md border border-cyber-blue/40 px-2 py-1 text-[11px] font-semibold text-cyber-blue transition-colors hover:bg-cyber-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue/60"
-                        >
-                          Investigate
-                        </button>
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            onClick={() => openJourney(row.id)}
+                            className="rounded-md border border-cyber-purple/40 px-2 py-1 text-[11px] font-semibold text-cyber-purple transition-colors hover:bg-cyber-purple/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-purple/60"
+                          >
+                            Journey
+                          </button>
+                          <button
+                            onClick={() => openIncident(row.id)}
+                            className="rounded-md border border-cyber-blue/40 px-2 py-1 text-[11px] font-semibold text-cyber-blue transition-colors hover:bg-cyber-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-blue/60"
+                          >
+                            Investigate
+                          </button>
+                          <button
+                            onClick={() => openReport(row.id)}
+                            className="rounded-md border border-cyber-green/40 px-2 py-1 text-[11px] font-semibold text-cyber-green transition-colors hover:bg-cyber-green/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyber-green/60"
+                          >
+                            Report
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     <AnimatePresence initial={false}>

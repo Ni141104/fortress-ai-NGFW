@@ -11,6 +11,7 @@ import {
 import { SeverityChip } from "@/components/ui/cyber";
 import { searchEverything } from "@/lib/soc-selectors";
 import { useSoc } from "@/lib/soc-store";
+import { usePlatform } from "@/lib/platform-store";
 import { ngfw } from "@/services";
 import type { MITRETechnique } from "@/types";
 import type { SimulationSnapshot } from "@/types/simulation";
@@ -37,6 +38,7 @@ export function UnifiedSearch({
   alerts: SocAlert[];
 }) {
   const { searchOpen, setSearchOpen, openIncident } = useSoc();
+  const { openJourney } = usePlatform();
   const [query, setQuery] = useState("");
   const [techniques, setTechniques] = useState<MITRETechnique[]>([]);
 
@@ -94,7 +96,10 @@ export function UnifiedSearch({
                   // query keeps cmdk's own fuzzy filter from hiding them.
                   value={`${hit.title} ${hit.subtitle} ${query}`}
                   onSelect={() => {
-                    if (hit.attackId) openIncident(hit.attackId);
+                    if (hit.attackId) {
+                      if (hit.group === "Attacks") openJourney(hit.attackId);
+                      else openIncident(hit.attackId);
+                    }
                     setSearchOpen(false);
                   }}
                   className="gap-3"
@@ -103,7 +108,9 @@ export function UnifiedSearch({
                     <p className="truncate text-xs font-medium text-foreground">{hit.title}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{hit.subtitle}</p>
                   </div>
-                  {hit.severity && <SeverityChip severity={hit.severity} size="sm" showIcon={false} />}
+                  {hit.severity && (
+                    <SeverityChip severity={hit.severity} size="sm" showIcon={false} />
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>

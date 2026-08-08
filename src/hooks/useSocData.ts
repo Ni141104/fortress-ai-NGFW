@@ -3,6 +3,7 @@ import { useSimulation } from "@/hooks/useSimulation";
 import { useLiveData } from "@/hooks/useLiveData";
 import { useMetricSeries } from "@/hooks/useMetricSeries";
 import { useSoc } from "@/lib/soc-store";
+import { usePlatformOptional } from "@/lib/platform-store";
 import {
   deriveAlertSeeds,
   deriveHealth,
@@ -32,6 +33,8 @@ import type { SocAlert } from "@/types/soc";
 export function useSocData() {
   const snapshot = useSimulation();
   const { filters, alertStates } = useSoc();
+  const platform = usePlatformOptional();
+  const widgetRefreshInterval = platform?.settings.widgetRefreshInterval ?? 5000;
 
   const allRows = useMemo(() => deriveThreatRows(snapshot), [snapshot]);
   const rows = useMemo(() => filterThreatRows(allRows, filters), [allRows, filters]);
@@ -75,12 +78,20 @@ export function useSocData() {
   const series = useMetricSeries(seriesInput);
 
   // ---- Phase 4: AI Intelligence view models (derived from the same snapshot) ----
-  const techniques = useLiveData(() => ngfw.mitre.getTechniques(), [], 0);
-  const honeypotSessions = useLiveData(() => ngfw.honeypot.getSessions(12), [], 0);
-  const flClients = useLiveData(() => ngfw.federated.getClients(), [], 0);
-  const flRounds = useLiveData(() => ngfw.federated.getRounds(24), [], 0);
-  const policyHistory = useLiveData(() => ngfw.policy.getHistory(), [], 0);
-  const currentPolicy = useLiveData(() => ngfw.policy.getCurrentVersion(), [], 0);
+  const techniques = useLiveData(() => ngfw.mitre.getTechniques(), [], widgetRefreshInterval);
+  const honeypotSessions = useLiveData(
+    () => ngfw.honeypot.getSessions(12),
+    [],
+    widgetRefreshInterval,
+  );
+  const flClients = useLiveData(() => ngfw.federated.getClients(), [], widgetRefreshInterval);
+  const flRounds = useLiveData(() => ngfw.federated.getRounds(24), [], widgetRefreshInterval);
+  const policyHistory = useLiveData(() => ngfw.policy.getHistory(), [], widgetRefreshInterval);
+  const currentPolicy = useLiveData(
+    () => ngfw.policy.getCurrentVersion(),
+    [],
+    widgetRefreshInterval,
+  );
 
   const rlAgent = useMemo(() => deriveRLAgent(snapshot), [snapshot]);
   const flSummary = useMemo(
