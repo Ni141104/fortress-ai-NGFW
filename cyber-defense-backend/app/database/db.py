@@ -695,9 +695,30 @@ def get_store() -> Any:
 
 
 async def init_db() -> None:
-    """Create schema (idempotent). Call from app lifespan."""
+    """Create schema (idempotent). Call from app lifespan.
+
+    When PostgreSQL is configured but unreachable (deploy egress blocked, bad
+    DATABASE_URL, migration host name string, ...) fall back to the ephemeral
+    in-memory store instead of crashing startup. The app stays up; data is
+    lost on restart and the warning below points at the root cause.
+    """
+    global _store
     store = get_store()
-    await store.init()
+    try:
+        await store.init()
+    except Exception as exc:  # noqa: BLE001
+        if isinstance(store, PostgresStore):
+            logger.warning(
+                "PostgreSQL unreachable (%s). Falling back to in-memory store; "
+                "data will not persist. Check DATABASE_URL on the host.",
+                exc,
+            )
+            await store.close()
+            reset_store()
+            _store = MemoryStore()
+            await _store.init()
+        else:
+            raise
 
 
 async def close_db() -> None:
