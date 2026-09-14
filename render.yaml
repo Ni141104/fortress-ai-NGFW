@@ -1,0 +1,21 @@
+# Render Blueprint for the FastAPI backend.
+# Create via: Render dashboard -> New -> Blueprint -> connect GitHub repo
+# (or paste the public repo URL). The service auto-builds from
+# cyber-defense-backend/Dockerfile.
+services:
+  - type: web
+    name: fortress-ai-ngfw-api
+    runtime: docker
+    rootDir: cyber-defense-backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: https://your-frontend.vercel.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
