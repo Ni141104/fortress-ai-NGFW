@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+.git
+.DS_Store
+*.zip
+README.md
+FRONTEND.md
+SETUP.md
