@@ -668,10 +668,27 @@ export function deriveXaiExplanation(
   // Resolve the underlying attack for policy/threat events tied to an attackId.
   const linkedAttack =
     attack ?? (event?.attackId ? snapshot.queue.find((a) => a.id === event.attackId) : undefined);
-  if (!linkedAttack && !event) return null;
 
-  const target = linkedAttack;
+  // MITRE technique buttons pass the technique id (e.g. "T1190") — match against
+  // the queued/running attack that carries it.
+  const techniqueAttack = linkedAttack
+    ? undefined
+    : snapshot.queue.find((a) => a.mitreTechniqueId === subjectId);
+
+  // Policy-level / generic subjects (the RL "rl-policy" fallback, ZeroDay
+  // candidate ids, dashboard technique ids): anchor on the most recent active
+  // attack so the drawer always renders live model scores.
+  const fallbackAttack =
+    techniqueAttack ??
+    [...snapshot.queue]
+      .filter((a) => a.state !== "queued" && a.state !== "cancelled")
+      .sort((a, b) => (a.finishedAt ?? a.createdAt).localeCompare(b.finishedAt ?? b.createdAt))
+      .at(-1);
+
+  const target = techniqueAttack ?? fallbackAttack;
+  const resolvedId = target?.id ?? subjectId;
   const def = target ? ATTACK_CATALOG.find((a) => a.id === target.kind) : undefined;
+  const isPolicyLevel = kind === "policy" || subjectId === "rl-policy";
 
   const isolationForestScore = clamp(
     0.5 +
@@ -688,7 +705,7 @@ export function deriveXaiExplanation(
     : "T0000 · Unclassified";
 
   const whyDetected = target
-    ? `Isolation Forest flagged anomalous entropy (${isolationForestScore.toFixed(2)}) on ${target.kind} traffic from ${target.sourceIp}; XGBoost classified as "${target.name}" with ${(xgboostConfidence * 100).toFixed(0)}% confidence.`
+    ? `Isolation Forest flagged anomalous entropy (${isolationForestScore.toFixed(2)}) on ${target.kind} traffic from ${target.sourceIp}; ${def?.name ?? target.name} matched ${target.mitreTechniqueId} (${target.mitreTactic}).`
     : (event?.description ?? "Detection signal from the simulation engine.");
 
   const whyBlocked =
@@ -697,12 +714,14 @@ export function deriveXaiExplanation(
       : `RL policy agent selected ${rlDecision.toUpperCase()} — Tier-2 confidence ${(xgboostConfidence * 100).toFixed(0)}% exceeded the enforcement threshold, and PEO installed a drop rule.`;
 
   return {
-    subjectId,
+    subjectId: resolvedId,
     subjectKind: kind,
     title: target?.name ?? event?.title ?? subjectId,
-    subtitle: target
-      ? `${target.id} · ${target.sourceIp} → ${target.config.target}`
-      : `${subjectId} · ${event?.title ?? ""}`,
+    subtitle: isPolicyLevel
+      ? `Policy agent · ${target?.config.target ?? "all targets"}`
+      : target
+        ? `${resolvedId} · ${target.sourceIp} → ${target.config.target}`
+        : `${subjectId} · ${event?.title ?? ""}`,
     severity,
     whyDetected,
     whyBlocked,

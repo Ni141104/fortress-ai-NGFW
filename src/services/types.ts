@@ -26,39 +26,39 @@ import type {
  */
 export interface NgfwService {
   traffic: {
-    getStats(role: Role): TrafficStat[];
-    getPipeline(): PipelineStage[];
+    getStats(role: Role): TrafficStat[] | Promise<TrafficStat[]>;
+    getPipeline(): PipelineStage[] | Promise<PipelineStage[]>;
   };
   threats: {
-    getTimeline(rangeHours: number): ThreatDataPoint[];
-    getActiveAttacks(role: Role): ActiveAttack[];
-    getAlerts(): Alert[];
-    getZeroDay(): ZeroDayDetection[];
-    getIntel(): ThreatIntelIndicator[];
-    getTimelineFeed(role: Role): TimelineEventItem[];
+    getTimeline(rangeHours: number): ThreatDataPoint[] | Promise<ThreatDataPoint[]>;
+    getActiveAttacks(role: Role): ActiveAttack[] | Promise<ActiveAttack[]>;
+    getAlerts(): Alert[] | Promise<Alert[]>;
+    getZeroDay(): ZeroDayDetection[] | Promise<ZeroDayDetection[]>;
+    getIntel(): ThreatIntelIndicator[] | Promise<ThreatIntelIndicator[]>;
+    getTimelineFeed(role: Role): TimelineEventItem[] | Promise<TimelineEventItem[]>;
   };
   mitre: {
-    getTechniques(): MITRETechnique[];
-    getSimulationCatalog(): AttackTechniqueOption[];
+    getTechniques(): MITRETechnique[] | Promise<MITRETechnique[]>;
+    getSimulationCatalog(): AttackTechniqueOption[] | Promise<AttackTechniqueOption[]>;
   };
   rl: {
-    getDecisions(count?: number): RLDecision[];
-    getRewardCurve(count?: number): RLRewardPoint[];
-    getActionDistribution(): RLActionShare[];
+    getDecisions(count?: number): RLDecision[] | Promise<RLDecision[]>;
+    getRewardCurve(count?: number): RLRewardPoint[] | Promise<RLRewardPoint[]>;
+    getActionDistribution(): RLActionShare[] | Promise<RLActionShare[]>;
   };
   honeypot: {
-    getSessions(count?: number): HoneypotSession[];
+    getSessions(count?: number): HoneypotSession[] | Promise<HoneypotSession[]>;
   };
   federated: {
-    getClients(): FederatedClient[];
-    getRounds(count?: number): FederatedRound[];
+    getClients(): FederatedClient[] | Promise<FederatedClient[]>;
+    getRounds(count?: number): FederatedRound[] | Promise<FederatedRound[]>;
   };
   policy: {
-    getCurrentVersion(): PolicyVersion;
-    getHistory(): PolicyVersion[];
+    getCurrentVersion(): PolicyVersion | Promise<PolicyVersion>;
+    getHistory(): PolicyVersion[] | Promise<PolicyVersion[]>;
   };
   system: {
-    getHealth(): SystemMetric[];
+    getHealth(): SystemMetric[] | Promise<SystemMetric[]>;
   };
   simulation: {
     launch(techniqueId: string, targetIp: string): ActiveAttack;

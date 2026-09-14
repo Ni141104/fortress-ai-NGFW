@@ -23,7 +23,10 @@ import {
   deriveZeroDaySummary,
 } from "@/lib/ai-selectors";
 import { ngfw } from "@/services";
-import type { SocAlert } from "@/types/soc";
+import { liveSimulationService } from "@/services/live-simulation";
+import type { SocAlert, ThreatRow } from "@/types/soc";
+import type { AttackKind } from "@/types/simulation";
+import { environmentFor, stageLabel } from "@/lib/soc-selectors";
 
 /**
  * The single SOC read model. Every Blue Team widget consumes this hook, so the
@@ -35,8 +38,62 @@ export function useSocData() {
   const { filters, alertStates } = useSoc();
   const platform = usePlatformOptional();
   const widgetRefreshInterval = platform?.settings.widgetRefreshInterval ?? 5000;
+  const liveMode = platform?.settings.demoModeEnabled === false;
 
-  const allRows = useMemo(() => deriveThreatRows(snapshot), [snapshot]);
+  const persistedAttacks = useLiveData(
+    () => ngfw.threats.getActiveAttacks("blue"),
+    [liveMode],
+    widgetRefreshInterval,
+  );
+
+  // PREVIOUS IMPLEMENTATION — none.
+  // Added: in live mode the backend WS room is owner-only so a second browser
+  // (e.g. Blue Team) cannot stream Red's attack directly. This poller replays
+  // the real /history rows and /dashboard recent_events into the local engine
+  // so the live timeline, journey steps and alert centre work for other tabs
+  // without fabricating any data.
+  useLiveData(
+    () => (liveMode ? liveSimulationService.observeBackend() : Promise.resolve(false)),
+    [liveMode],
+    widgetRefreshInterval,
+  );
+
+  const liveRows = useMemo<ThreatRow[]>(
+    () =>
+      (persistedAttacks.data ?? []).map((attack) => ({
+        id: attack.id,
+        name: attack.technique,
+        kind: (attack.kind ?? "zero-day") as AttackKind,
+        state: attack.state ?? "completed",
+        stage: attack.stage as ThreatRow["stage"],
+        stageLabel: stageLabel(attack.stage as ThreatRow["stage"]),
+        severity: attack.severity,
+        mitreTechniqueId: attack.techniqueId,
+        mitreTactic: "Backend detection",
+        confidence: attack.confidence,
+        target: attack.targetIp,
+        sourceIp: attack.sourceIp,
+        environment: environmentFor(attack.targetIp),
+        startedAt: attack.startedAt,
+        updatedAt: attack.startedAt,
+        packetsSent: 0,
+        packetsBlocked: attack.state === "blocked" ? 1 : 0,
+        // PREVIOUS IMPLEMENTATION — always 100%:
+        //   progress: 1,
+        // Reason replaced: running live attacks had no progress signal so the
+        // grid defaulted to 100% (complete) before the backend finished.
+        // Now 100% is reserved for terminal verdicts; running rows stay at 0
+        // until the backend reports a final state.
+        progress: attack.state === "completed" || attack.state === "blocked" ? 1 : 0,
+        verdict: attack.verdict ?? attack.action,
+      })),
+    [persistedAttacks.data],
+  );
+
+  const allRows = useMemo(
+    () => (liveMode && persistedAttacks.data ? liveRows : deriveThreatRows(snapshot)),
+    [liveMode, liveRows, persistedAttacks.data, snapshot],
+  );
   const rows = useMemo(() => filterThreatRows(allRows, filters), [allRows, filters]);
 
   const alerts = useMemo<SocAlert[]>(

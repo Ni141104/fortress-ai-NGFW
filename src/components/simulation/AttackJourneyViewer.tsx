@@ -36,7 +36,10 @@ export function AttackJourneyViewer({ snapshot }: { snapshot: SimulationSnapshot
   } = usePlatform();
 
   const attack = useMemo(
-    () => snapshot.queue.find((a) => a.id === journeyAttackId) ?? null,
+    () =>
+      snapshot.queue.find(
+        (a) => a.id === journeyAttackId || a.backendId === journeyAttackId,
+      ) ?? null,
     [snapshot.queue, journeyAttackId],
   );
 
@@ -86,7 +89,7 @@ export function AttackJourneyViewer({ snapshot }: { snapshot: SimulationSnapshot
                 Attack Journey — {attack.name}
               </SheetTitle>
               <SheetDescription className="font-mono text-xs">
-                {attack.id} · {attack.sourceIp} → {attack.config.target}
+                {attack.backendId ? `Backend ${attack.backendId}` : `Local queue ${attack.id}`} · {attack.sourceIp} → {attack.config.target}
               </SheetDescription>
             </SheetHeader>
 

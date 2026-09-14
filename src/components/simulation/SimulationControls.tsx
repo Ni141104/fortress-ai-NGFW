@@ -12,7 +12,7 @@ const controlClass =
 
 /** Transport controls for the centralized simulation engine. */
 export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot }) {
-  const { updateSettings, setDemoRunning } = usePlatform();
+  const { settings, updateSettings, setDemoRunning } = usePlatform();
   const { status, speed, metrics } = snapshot;
   const running = status === "running";
   const paused = status === "paused";
@@ -23,11 +23,11 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
       <StatusBadge status={status === "running" ? "healthy" : status} />
 
       {running ? (
-        <button className={controlClass} onClick={() => simulationService.pause()}>
+        <button className={controlClass} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.pause()}>
           <Pause className="h-3.5 w-3.5" /> Pause
         </button>
       ) : paused ? (
-        <button className={controlClass} onClick={() => simulationService.resume()}>
+        <button className={controlClass} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.resume()}>
           <Play className="h-3.5 w-3.5" /> Resume
         </button>
       ) : (
@@ -45,13 +45,14 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
           controlClass,
           "border-cyber-pink/40 bg-cyber-pink/10 text-cyber-pink hover:bg-cyber-pink/20",
         )}
-        disabled={!running && !paused}
+        disabled={(!running && !paused) || !settings.demoModeEnabled}
+        title={!settings.demoModeEnabled ? "Demo Mode only" : undefined}
         onClick={() => simulationService.cancel()}
       >
         <Square className="h-3.5 w-3.5" /> Cancel
       </button>
 
-      <button className={controlClass} onClick={() => simulationService.replay()}>
+      <button className={controlClass} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.replay()}>
         <Repeat className="h-3.5 w-3.5" /> Replay
       </button>
 
@@ -73,6 +74,8 @@ export function SimulationControls({ snapshot }: { snapshot: SimulationSnapshot 
         {SPEEDS.map((s) => (
           <button
             key={s}
+            disabled={!settings.demoModeEnabled}
+            title={!settings.demoModeEnabled ? "Demo Mode only" : undefined}
             onClick={() => updateSettings({ simulationSpeed: s })}
             className={cn(
               "rounded px-2 py-1 font-mono text-[11px] font-semibold transition-colors",

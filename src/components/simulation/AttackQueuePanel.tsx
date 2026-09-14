@@ -12,14 +12,16 @@ const stateBadge: Record<AttackRunState, string> = {
   blocked: "block",
   unknown: "degraded",
   cancelled: "offline",
+  disconnected: "offline",
 };
 
 const iconBtn =
-  "inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-cyber-blue/40 hover:text-cyber-blue";
+  "inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-cyber-blue/40 hover:text-cyber-blue disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Attack queue with per-operation lifecycle actions. */
 export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
-  const { openJourney } = usePlatform();
+  const { openJourney, settings } = usePlatform();
+  const liveMode = !settings.demoModeEnabled;
   if (queue.length === 0) {
     return (
       <EmptyState
@@ -33,7 +35,18 @@ export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className={iconBtn} onClick={() => attackService.clearQueue()}>
+        {/* PREVIOUS IMPLEMENTATION — always enabled:
+            <button className={iconBtn} onClick={() => attackService.clearQueue()}> */}
+        <button
+          className={iconBtn}
+          disabled={liveMode}
+          title={
+            liveMode
+              ? "Clear queue is disabled in live mode — FastAPI runs finish server-side"
+              : undefined
+          }
+          onClick={() => attackService.clearQueue()}
+        >
           <Trash2 className="h-3 w-3" /> Clear queue
         </button>
       </div>
@@ -72,12 +85,12 @@ export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
               <button className={iconBtn} onClick={() => openJourney(attack.id)}>
                 <Route className="h-3 w-3" /> Journey
               </button>
-              {attack.state === "running" && (
+              {attack.state === "running" && liveMode !== true && (
                 <button className={iconBtn} onClick={() => attackService.pauseAttack(attack.id)}>
                   <Pause className="h-3 w-3" /> Pause
                 </button>
               )}
-              {attack.state === "paused" && (
+              {attack.state === "paused" && liveMode !== true && (
                 <button className={iconBtn} onClick={() => attackService.resumeAttack(attack.id)}>
                   <Play className="h-3 w-3" /> Resume
                 </button>
@@ -85,11 +98,27 @@ export function AttackQueuePanel({ queue }: { queue: QueuedAttack[] }) {
               {(attack.state === "queued" ||
                 attack.state === "running" ||
                 attack.state === "paused") && (
-                <button className={iconBtn} onClick={() => attackService.cancelAttack(attack.id)}>
+                <button
+                  className={iconBtn}
+                  disabled={liveMode}
+                  title={liveMode ? "Live runs finish server-side; unsupported" : undefined}
+                  onClick={() => attackService.cancelAttack(attack.id)}
+                >
                   <X className="h-3 w-3" /> Cancel
                 </button>
               )}
-              <button className={iconBtn} onClick={() => attackService.replayAttack(attack.id)}>
+              {/* PREVIOUS IMPLEMENTATION — no live guard:
+              <button className={iconBtn} onClick={() => attackService.replayAttack(attack.id)}> */}
+              <button
+                className={iconBtn}
+                disabled={liveMode}
+                title={
+                  liveMode
+                    ? "Replay is disabled in live mode — launch a fresh op from the catalog"
+                    : undefined
+                }
+                onClick={() => attackService.replayAttack(attack.id)}
+              >
                 <Repeat className="h-3 w-3" /> Replay
               </button>
               <button className={iconBtn} onClick={() => attackService.duplicate(attack.id)}>

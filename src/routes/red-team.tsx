@@ -38,7 +38,9 @@ export const Route = createFileRoute("/red-team")({
 
 function RedTeamPage() {
   const snapshot = useSimulation();
-  const { openJourney } = usePlatform();
+  const { openJourney, settings } = usePlatform();
+  const activeAttack = snapshot.queue.find((attack) => attack.id === snapshot.activeAttackId);
+  const currentBackendId = activeAttack?.backendId ?? [...snapshot.queue].reverse().find((attack) => attack.backendId)?.backendId;
   const catalog = useMemo(() => attackService.getCatalog(), []);
 
   const [selected, setSelected] = useState<AttackKind>(catalog[0]!.id);
@@ -51,8 +53,11 @@ function RedTeamPage() {
   const selectAttack = (kind: AttackKind) => {
     setSelected(kind);
     setConfig(attackService.defaultConfig(kind));
-    const queued = snapshot.queue.find((a) => a.kind === kind);
-    if (queued) openJourney(queued.id);
+    // PREVIOUS IMPLEMENTATION — opened the journey of an unrelated already-queued op
+    // when selecting a catalog entry. Selecting a catalog entry now only
+    // configures the new attack form; journeys open from the queue/launch path.
+    // const queued = snapshot.queue.find((a) => a.kind === kind);
+    // if (queued) openJourney(queued.id);
   };
 
   return (
@@ -71,6 +76,19 @@ function RedTeamPage() {
           icon={<Swords className="h-4 w-4" />}
           live={snapshot.status === "running"}
         >
+          {/* PREVIOUS IMPLEMENTATION — always showed the live banner:
+            <div className="mb-4 rounded border border-cyber-green/25 bg-cyber-green/5 px-3 py-2 font-mono text-[11px] text-cyber-green">
+              Backend attack ID: {currentBackendId ?? "Waiting for FastAPI launch"}
+            </div> */}
+          {settings.demoModeEnabled ? (
+            <div className="mb-4 rounded border border-cyber-blue/25 bg-cyber-blue/5 px-3 py-2 font-mono text-[11px] text-cyber-blue">
+              Demo mode — local simulation engine (no FastAPI backend)
+            </div>
+          ) : (
+            <div className="mb-4 rounded border border-cyber-green/25 bg-cyber-green/5 px-3 py-2 font-mono text-[11px] text-cyber-green">
+              Backend attack ID: {currentBackendId ?? "Waiting for FastAPI launch"}
+            </div>
+          )}
           <SimulationMetricsStrip snapshot={snapshot} />
         </WidgetCard>
 
@@ -107,7 +125,13 @@ function RedTeamPage() {
             onChange={(patch) => setConfig((c) => ({ ...c, ...patch }))}
             onEnqueue={() => {
               const attack = attackService.enqueue(selected, config);
-              openJourney(attack.id);
+              // PREVIOUS IMPLEMENTATION — preserved for rollback/debugging
+              // Reason replaced: live queueing opened a modal over the Launch control before FastAPI started.
+              if (settings.demoModeEnabled) {
+                openJourney(attack.id);
+              } else {
+                attackService.launch();
+              }
             }}
           />
         </WidgetCard>
@@ -118,12 +142,16 @@ function RedTeamPage() {
           icon={<Swords className="h-4 w-4" />}
           live={snapshot.status === "running"}
           actions={
-            <button
-              onClick={() => attackService.launch()}
-              className="rounded-md border border-cyber-pink/40 bg-cyber-pink/10 px-3 py-1 text-[11px] font-semibold text-cyber-pink transition-colors hover:bg-cyber-pink/20"
-            >
-              Launch
-            </button>
+            settings.demoModeEnabled ? (
+              <button
+                onClick={() => attackService.launch()}
+                className="rounded-md border border-cyber-pink/40 bg-cyber-pink/10 px-3 py-1 text-[11px] font-semibold text-cyber-pink transition-colors hover:bg-cyber-pink/20"
+              >
+                Launch
+              </button>
+            ) : (
+              <span className="font-mono text-[10px] text-cyber-green">FastAPI launch on enqueue</span>
+            )
           }
         >
           <AttackQueuePanel queue={snapshot.queue} />

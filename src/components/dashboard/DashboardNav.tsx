@@ -13,21 +13,25 @@ import {
   X,
 } from "lucide-react";
 import RoleSwitcher from "./RoleSwitcher";
-import { DemoModeButton } from "@/components/simulation/ScenarioLibrary";
 import { NotificationBell } from "@/components/platform/NotificationCenter";
 import { cn } from "@/lib/utils";
+import { usePlatform } from "@/lib/platform-store";
+import { useRole } from "@/lib/role-store";
+import { clearSession } from "@/services/api-client";
 
 const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Red Team", href: "/red-team", icon: Swords },
-  { name: "Pipeline", href: "/pipeline", icon: Workflow },
-  { name: "Timeline", href: "/timeline", icon: ListTree },
+  { name: "Blue Team SOC", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Red Team Operations", href: "/red-team", icon: Swords },
+  { name: "Detection Pipeline", href: "/pipeline", icon: Workflow },
+  { name: "Event Timeline", href: "/timeline", icon: ListTree },
   { name: "Settings", href: "/settings", icon: Settings },
 ] as const;
 
 
 export default function DashboardNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { settings, updateSettings } = usePlatform();
+  const { role, accessRole } = useRole();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string) =>
@@ -53,7 +57,7 @@ export default function DashboardNav() {
 
           {/* Navigation Links */}
           <nav className="hidden items-center gap-2 lg:flex">
-            {navItems.map((item) => {
+            {navItems.filter((item) => accessRole === "admin" || (item.href !== "/red-team" && role === "blue") || (item.href === "/red-team" && role === "red") || !["/dashboard", "/red-team"].includes(item.href)).map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
 
@@ -84,11 +88,30 @@ export default function DashboardNav() {
 
           {/* Role + System Status */}
           <div className="flex items-center gap-3">
-            <div className="hidden md:block">
-              <DemoModeButton />
-            </div>
+            <button
+              onClick={() => updateSettings({ demoModeEnabled: !settings.demoModeEnabled })}
+              className={cn(
+                "inline-flex rounded-md border px-2.5 py-1.5 text-[10px] font-bold tracking-wide transition-colors",
+                settings.demoModeEnabled
+                  ? "border-cyber-amber/50 bg-cyber-amber/10 text-cyber-amber"
+                  : "border-cyber-green/50 bg-cyber-green/10 text-cyber-green",
+              )}
+              aria-label={settings.demoModeEnabled ? "Switch to live FastAPI mode" : "Switch to demo mode"}
+              title={settings.demoModeEnabled ? "Switch to live FastAPI mode" : "Switch to demo mode"}
+            >
+              {settings.demoModeEnabled ? "DEMO" : "LIVE / FASTAPI"}
+            </button>
             <NotificationBell />
             <RoleSwitcher />
+            <button
+              onClick={() => {
+                clearSession();
+                window.dispatchEvent(new Event("ngfw:logout"));
+              }}
+              className="inline-flex rounded-md border border-border px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:border-cyber-pink/50 hover:text-cyber-pink"
+            >
+              Log out
+            </button>
             <div className="hidden text-right md:block">
               <div className="text-[10px] text-muted-foreground">System Status</div>
               <div className="flex items-center gap-2">
@@ -109,9 +132,19 @@ export default function DashboardNav() {
         {mobileOpen && (
           <nav className="mt-4 flex flex-col gap-1 lg:hidden">
             <div className="mb-2 px-4">
-              <DemoModeButton className="w-full justify-center" />
+              <button
+                onClick={() => updateSettings({ demoModeEnabled: !settings.demoModeEnabled })}
+                className={cn(
+                  "mb-2 inline-flex w-full justify-center rounded-md border px-3 py-2 text-xs font-bold",
+                  settings.demoModeEnabled
+                    ? "border-cyber-amber/50 bg-cyber-amber/10 text-cyber-amber"
+                    : "border-cyber-green/50 bg-cyber-green/10 text-cyber-green",
+                )}
+              >
+                {settings.demoModeEnabled ? "DEMO MODE" : "LIVE / FASTAPI"}
+              </button>
             </div>
-            {navItems.map((item) => {
+            {navItems.filter((item) => accessRole === "admin" || (item.href !== "/red-team" && role === "blue") || (item.href === "/red-team" && role === "red") || !["/dashboard", "/red-team"].includes(item.href)).map((item) => {
               const Icon = item.icon;
               return (
                 <Link

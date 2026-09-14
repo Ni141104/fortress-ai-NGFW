@@ -47,7 +47,10 @@ export function IncidentReportDrawer({ snapshot }: { snapshot: SimulationSnapsho
 
   const row = useMemo(() => {
     const rows = deriveThreatRows(snapshot);
-    return rows.find((r) => r.id === reportAttackId) ?? null;
+    const attack = snapshot.queue.find(
+      (a) => a.id === reportAttackId || a.backendId === reportAttackId,
+    );
+    return rows.find((r) => r.id === attack?.id) ?? null;
   }, [snapshot, reportAttackId]);
 
   const events = useMemo(
@@ -92,14 +95,14 @@ export function IncidentReportDrawer({ snapshot }: { snapshot: SimulationSnapsho
       })),
       mitreTechniques: mitreEvents.map((e) => e.title),
       rlDecisions: rlDecisions.map((e) => ({ title: e.title, description: e.description })),
-      policyChanges: policies.map((e) =>
-        "rule" in e
-          ? { rule: e.rule, action: e.action, description: e.description }
-          : { title: e.title },
-      ),
+      policyChanges: policies.map((e) => ({
+        rule: e.rule,
+        action: e.action,
+        description: e.description,
+      })),
       threatScore: Math.round(row.confidence * 100),
       riskLevel: riskLevel(row.confidence, row.severity).label,
-      recommendedActions: RECOMMENDED_ACTIONS[row.severity] ?? RECOMMENDED_ACTIONS.low,
+      recommendedActions: RECOMMENDED_ACTIONS[row.severity] ?? RECOMMENDED_ACTIONS["low"],
     };
   }, [row, events, mitreEvents, rlDecisions, policies]);
 
@@ -329,7 +332,7 @@ export function IncidentReportDrawer({ snapshot }: { snapshot: SimulationSnapsho
                         key={p.id}
                         className="rounded border border-cyber-green/15 px-3 py-2 font-mono text-[11px]"
                       >
-                        {"rule" in p ? p.rule : p.title}
+                        {p.rule}
                         <p className="mt-0.5 text-muted-foreground">{p.description}</p>
                       </li>
                     ))}
@@ -343,7 +346,7 @@ export function IncidentReportDrawer({ snapshot }: { snapshot: SimulationSnapsho
                   <AlertTriangle className="h-3.5 w-3.5" /> Recommended Actions
                 </h4>
                 <ol className="list-decimal space-y-1 pl-5 text-xs text-foreground">
-                  {(RECOMMENDED_ACTIONS[row.severity] ?? RECOMMENDED_ACTIONS.low!).map((action) => (
+                  {(RECOMMENDED_ACTIONS[row.severity] ?? RECOMMENDED_ACTIONS["low"]!).map((action) => (
                     <li key={action}>{action}</li>
                   ))}
                 </ol>

@@ -33,6 +33,7 @@ import { ZeroDayIntelligenceWidget } from "@/components/soc/ZeroDayIntelligenceW
 import { useSocData } from "@/hooks/useSocData";
 import { SocProvider, useSoc } from "@/lib/soc-store";
 import { cn } from "@/lib/utils";
+import { usePlatformOptional } from "@/lib/platform-store";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -71,6 +72,7 @@ const SPAN_CLASS: Record<1 | 2 | 3, string> = {
 /** Phase 3 SOC — every widget reads one snapshot via useSocData. */
 function SecurityOperationsCenter() {
   const { prefs } = useSoc();
+  const platform = usePlatformOptional();
   const {
     snapshot,
     rows,
@@ -160,7 +162,11 @@ function SecurityOperationsCenter() {
     <div className="space-y-5">
       <PageHeader
         title="Security Operations Center"
-        description="Blue Team command view: live threat posture, detection telemetry and analyst triage — all driven by the centralized simulation engine."
+        description={
+          platform?.settings.demoModeEnabled === false
+            ? "Blue Team command view: persisted FastAPI attacks, authenticated pipeline events and analyst triage."
+            : "Blue Team command view: live threat posture, detection telemetry and analyst triage — all driven by the centralized simulation engine."
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <SearchTrigger />

@@ -9,6 +9,9 @@ import { usePlatform } from "@/lib/platform-store";
 import { ngfw } from "@/services";
 import { useRole } from "@/lib/role-store";
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { resetLearnedDefense } from "@/services";
+import { AdminUserPanel } from "@/components/platform/AdminUserPanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -30,8 +33,9 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsPage() {
-  const { role } = useRole();
+  const { role, accessRole } = useRole();
   const { settings, updateSettings, resetSettings } = usePlatform();
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const policies = useLiveData(() => ngfw.policy.getHistory(), [], settings.widgetRefreshInterval);
   const clients = useLiveData(
     () => ngfw.federated.getClients(),
@@ -47,9 +51,10 @@ function SettingsPage() {
       />
 
       <SectionGrid className="xl:grid-cols-2">
+        {accessRole === "admin" && <WidgetCard title="Team Access Management" subtitle="Provision Blue Team and Red Team accounts" icon={<Server className="h-4 w-4" />} live={false} className="xl:col-span-2"><AdminUserPanel /></WidgetCard>}
         <WidgetCard
           title="Operator Context"
-          subtitle="Mock role — Supabase Auth pending"
+          subtitle="Operator role and current data source"
           icon={<SlidersHorizontal className="h-4 w-4" />}
           live={false}
         >
@@ -59,7 +64,7 @@ function SettingsPage() {
               value={<StatusBadge status={role === "red" ? "block" : "healthy"} />}
             />
             <Row label="Perspective" value={role === "red" ? "Offensive" : "Defensive"} />
-            <Row label="Data source" value={<Tag>mock-service</Tag>} />
+            <Row label="Data source" value={<Tag>{settings.demoModeEnabled ? "demo-service" : "fastapi"}</Tag>} />
           </div>
         </WidgetCard>
 
@@ -160,12 +165,22 @@ function SettingsPage() {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <DemoModeButton />
             <button
+              onClick={() => {
+                setResetMessage(null);
+                void resetLearnedDefense().then((result) => setResetMessage(`${result.removed_rules} learned rules deactivated`)).catch((error: Error) => setResetMessage(error.message));
+              }}
+              className="rounded-md border border-cyber-pink/40 px-3 py-1.5 text-[11px] font-semibold text-cyber-pink"
+            >
+              Reset Learned Defense
+            </button>
+            <button
               onClick={resetSettings}
               className="rounded-md border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-cyber-blue/40 hover:text-foreground"
             >
               Reset settings
             </button>
           </div>
+          {resetMessage && <p className="mt-2 text-xs text-muted-foreground">{resetMessage}</p>}
         </WidgetCard>
 
         <WidgetCard

@@ -406,6 +406,9 @@ class SimulationEngine {
   private generatePackets() {
     const active = this.queue.find((a) => a.state === "running");
     if (!active) return;
+    // A duration-bounded operation stops injecting once its window elapses;
+    // otherwise the in-flight backlog never drains and the run can't settle.
+    if (active.progress >= 100) return;
 
     const mult = INTENSITY_MULTIPLIER[active.config.intensity] ?? 1;
     const spawn = Math.max(1, Math.min(4, Math.round((active.config.packetRate * mult) / 400)));

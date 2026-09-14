@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -19,6 +19,11 @@ import { AttackJourneyViewer } from "../components/simulation/AttackJourneyViewe
 import { CommandCenter } from "../components/simulation/CommandCenter";
 import { NotificationCenter } from "../components/platform/NotificationCenter";
 import { IncidentReportDrawer } from "../components/soc/IncidentReportDrawer";
+import { AuthPanel } from "../components/platform/AuthPanel";
+import { getStoredUser } from "../services/api-client";
+import type { AuthUser } from "../services/api-client";
+import { useRouterState, useNavigate } from "@tanstack/react-router";
+import { useRole } from "../lib/role-store";
 
 function NotFoundComponent() {
   return (
@@ -130,13 +135,36 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+    const handleLogout = () => setUser(null);
+    window.addEventListener("ngfw:logout", handleLogout);
+    return () => window.removeEventListener("ngfw:logout", handleLogout);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RoleProvider>
-        <AppWithPlatform />
+      <RoleProvider key={user?.email ?? "signed-out"}>
+        {user ? <AppWithPlatform /> : <LoginScreen onAuthenticated={setUser} />}
       </RoleProvider>
     </QueryClientProvider>
+  );
+}
+
+function LoginScreen({ onAuthenticated }: { onAuthenticated: (user: AuthUser) => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+      <div className="w-full max-w-md rounded-xl border border-cyber-blue/25 bg-slate-950/80 p-6 shadow-2xl">
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyber-blue">AI-NGFW Console</p>
+          <h1 className="mt-2 text-2xl font-bold">Sign in to continue</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Use your assigned email and password to open the security workspace.</p>
+        </div>
+        <AuthPanel onAuthenticated={(next) => next && onAuthenticated(next)} />
+      </div>
+    </div>
   );
 }
 
@@ -145,6 +173,7 @@ function AppWithPlatform() {
 
   return (
     <PlatformProvider snapshot={snapshot}>
+    <RoleRouteGuard />
       <div className="cyber-grid min-h-screen bg-background text-foreground">
         <DashboardNav />
         <main className="mx-auto max-w-[1920px] px-4 py-6 md:px-6">
@@ -157,4 +186,36 @@ function AppWithPlatform() {
       <CommandCenter snapshot={snapshot} />
     </PlatformProvider>
   );
+}
+
+function RoleRouteGuard() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const { role, accessRole, hydrated } = useRole();
+
+  useEffect(() => {
+    // PREVIOUS IMPLEMENTATION — ran immediately with the default "blue" role
+    // before localStorage hydration, so /red-team briefly redirected to
+    // /dashboard (or vice versa) on deep-link reload. The guard now waits
+    // for the real role to hydrate before acting.
+    if (!hydrated) return;
+    if (accessRole !== "admin" && role === "blue" && pathname === "/red-team") {
+      void navigate({ to: "/dashboard" });
+    }
+    if (accessRole !== "admin" && role === "red" && pathname === "/dashboard") {
+      void navigate({ to: "/red-team" });
+    }
+  }, [accessRole, navigate, pathname, role, hydrated]);
+
+  if (!hydrated) {
+    return (
+      <div className="cyber-grid flex min-h-screen items-center justify-center bg-background text-foreground">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyber-blue">
+          Loading workspace…
+        </p>
+      </div>
+    );
+  }
+
+  return null;
 }

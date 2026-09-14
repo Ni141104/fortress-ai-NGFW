@@ -256,7 +256,12 @@ export function PlatformProvider({
   }, []);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    if (hydrated) {
+      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      // Broadcast so mode-dependent subscriptions (useSimulation stream router)
+      // pick up demo/live switches immediately.
+      window.dispatchEvent(new Event("ngfw:settings-changed"));
+    }
   }, [settings, hydrated]);
 
   // Auto-replay when simulation completes
@@ -268,7 +273,7 @@ export function PlatformProvider({
 
   useEffect(() => {
     if (!hydrated) return;
-    document.documentElement.dataset.themeAccent = settings.themeAccent;
+    document.documentElement.dataset["themeAccent"] = settings["themeAccent"];
   }, [settings.themeAccent, hydrated]);
 
   useEffect(() => {

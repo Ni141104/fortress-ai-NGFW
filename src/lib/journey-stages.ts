@@ -132,6 +132,37 @@ export function inferJourneyStep(
     if (idx >= 0) return idx;
   }
 
+  // PREVIOUS IMPLEMENTATION — only fell through to the static state checks.
+  // Added: infer from "Backend pipeline:" events so live attacks advance the
+  // journey without needing in-browser packets (the WS stream is owner-only).
+  const BACKEND_STAGE_POSITION: Record<string, JourneyStageDefinition["id"]> = {
+    start: "attacker",
+    flow_scan: "packetgen",
+    tier0: "tier0",
+    tier1: "tier1",
+    tier2: "tier2",
+    classify: "mitre",
+    avoid: "mitre",
+    rl_decision: "rl",
+    honeypot: "honeypot",
+    behaviour: "peo",
+    contain: "peo",
+    policy_update: "peo",
+    end: "final",
+  };
+  const reachedBackend = snapshot.events
+    .filter((e) => e.attackId === attack.id)
+    .map((e) => e.title.match(/^Backend pipeline: (\w+)/)?.[1] ?? "")
+    .map((stage) => BACKEND_STAGE_POSITION[stage])
+    .filter((s): s is JourneyStageDefinition["id"] => Boolean(s));
+  if (reachedBackend.length) {
+    const positions = reachedBackend.map((s) =>
+      stages.findIndex((step) => step.id === s),
+    );
+    const furthest = Math.max(...positions, 0);
+    if (furthest > 0) return furthest;
+  }
+
   if (attack.state === "queued") return 0;
   if (attack.state === "running") return Math.min(1, stages.length - 1);
   if (attack.verdict === "redirect") {

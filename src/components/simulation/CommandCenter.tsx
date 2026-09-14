@@ -91,11 +91,11 @@ export function CommandCenter({ snapshot }: { snapshot: SimulationSnapshot }) {
 
         <div className="flex flex-wrap gap-1">
           {running ? (
-            <button className={controlBtn} onClick={() => simulationService.pause()}>
+            <button className={controlBtn} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.pause()}>
               <Pause className="h-3 w-3" /> Pause
             </button>
           ) : paused ? (
-            <button className={controlBtn} onClick={() => simulationService.resume()}>
+            <button className={controlBtn} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.resume()}>
               <Play className="h-3 w-3" /> Resume
             </button>
           ) : (
@@ -109,7 +109,8 @@ export function CommandCenter({ snapshot }: { snapshot: SimulationSnapshot }) {
           )}
           <button
             className={controlBtn}
-            disabled={!running && !paused}
+            disabled={(!running && !paused) || !settings.demoModeEnabled}
+            title={!settings.demoModeEnabled ? "Demo Mode only" : undefined}
             onClick={() => {
               simulationService.cancel();
               setDemoRunning(false);
@@ -117,7 +118,7 @@ export function CommandCenter({ snapshot }: { snapshot: SimulationSnapshot }) {
           >
             <Square className="h-3 w-3" /> Stop
           </button>
-          <button className={controlBtn} onClick={() => simulationService.replay()}>
+          <button className={controlBtn} disabled={!settings.demoModeEnabled} title={!settings.demoModeEnabled ? "Demo Mode only" : undefined} onClick={() => simulationService.replay()}>
             <Repeat className="h-3 w-3" /> Replay
           </button>
           <button
@@ -137,6 +138,8 @@ export function CommandCenter({ snapshot }: { snapshot: SimulationSnapshot }) {
           {SPEEDS.map((s) => (
             <button
               key={s}
+              disabled={!settings.demoModeEnabled}
+              title={!settings.demoModeEnabled ? "Demo Mode only" : undefined}
               onClick={() => {
                 simulationService.setSpeed(s);
                 updateSettings({ simulationSpeed: s });

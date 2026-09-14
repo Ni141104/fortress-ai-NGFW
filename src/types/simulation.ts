@@ -13,15 +13,7 @@ import type { RLAction, Severity } from "./index";
 /* ------------------------------------------------------------------ */
 
 export type SimStageId =
-  | "attacker"
-  | "packetgen"
-  | "tier0"
-  | "tier1"
-  | "tier2"
-  | "mitre"
-  | "rl"
-  | "peo"
-  | "server";
+  "attacker" | "packetgen" | "tier0" | "tier1" | "tier2" | "mitre" | "rl" | "peo" | "server";
 
 export type SimStageStatus = "idle" | "processing" | "escalating" | "blocked" | "clear";
 
@@ -85,6 +77,8 @@ export interface AttackConfig {
   payloadVariant: string;
   stealthMode: boolean;
   notes: string;
+  /** Optional real pcap capture for live-mode upload. */
+  pcapFile?: File | null;
 }
 
 export type AttackRunState =
@@ -94,7 +88,8 @@ export type AttackRunState =
   | "completed"
   | "blocked"
   | "unknown"
-  | "cancelled";
+  | "cancelled"
+  | "disconnected";
 
 export interface QueuedAttack {
   id: string;
@@ -114,6 +109,8 @@ export interface QueuedAttack {
   finishedAt?: string | undefined;
   verdict?: RLAction | undefined;
   confidence: number;
+  /** Backend identifier, populated after a live FastAPI launch. */
+  backendId?: string | undefined;
 }
 
 /* ------------------------------------------------------------------ */
@@ -139,13 +136,7 @@ export interface SimulationPacket {
   createdAt: number;
 }
 
-export type SimEventType =
-  | "attack"
-  | "packet"
-  | "stage"
-  | "timeline"
-  | "policy"
-  | "threat";
+export type SimEventType = "attack" | "packet" | "stage" | "timeline" | "policy" | "threat";
 
 export interface SimEventBase {
   id: string;
@@ -195,12 +186,7 @@ export interface ThreatEvent extends SimEventBase {
 }
 
 export type SimulationEvent =
-  | AttackEvent
-  | PacketEvent
-  | StageEvent
-  | TimelineEvent
-  | PolicyEvent
-  | ThreatEvent;
+  AttackEvent | PacketEvent | StageEvent | TimelineEvent | PolicyEvent | ThreatEvent;
 
 export interface SimulationMetrics {
   packetsGenerated: number;

@@ -121,6 +121,9 @@ export interface ActiveAttack {
   action: RLAction;
   campaign?: string | undefined;
   origin: "external" | "simulated";
+  kind?: string | undefined;
+  state?: "queued" | "running" | "paused" | "completed" | "blocked" | "unknown" | "cancelled";
+  verdict?: string | undefined;
 }
 
 export interface Alert {

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Shield, Swords } from "lucide-react";
 import { useRole } from "@/lib/role-store";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "@tanstack/react-router";
 
 const OPTIONS = [
   { value: "blue" as const, label: "Blue Team", icon: Shield },
@@ -9,7 +10,8 @@ const OPTIONS = [
 ];
 
 export default function RoleSwitcher() {
-  const { role, setRole } = useRole();
+  const { role, setRole, allowedRoles } = useRole();
+  const navigate = useNavigate();
 
   return (
     <div
@@ -17,7 +19,7 @@ export default function RoleSwitcher() {
       aria-label="Operating role"
       className="relative flex items-center gap-1 rounded-lg border border-cyber-blue/25 bg-slate-950/60 p-1"
     >
-      {OPTIONS.map((option) => {
+      {OPTIONS.filter((option) => allowedRoles.includes(option.value)).map((option) => {
         const Icon = option.icon;
         const active = role === option.value;
         const tone = option.value === "red" ? "text-cyber-pink" : "text-cyber-blue";
@@ -27,7 +29,10 @@ export default function RoleSwitcher() {
             key={option.value}
             role="radio"
             aria-checked={active}
-            onClick={() => setRole(option.value)}
+            onClick={() => {
+              setRole(option.value);
+              void navigate({ to: option.value === "blue" ? "/dashboard" : "/red-team" });
+            }}
             className={cn(
               "relative flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
               active ? tone : "text-muted-foreground hover:text-foreground",

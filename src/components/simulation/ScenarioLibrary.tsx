@@ -2,7 +2,7 @@ import { Play, Zap } from "lucide-react";
 import { SeverityChip, Tag } from "@/components/ui/cyber";
 import { launchScenario, SCENARIO_LIBRARY } from "@/lib/scenario-library";
 import { usePlatformOptional } from "@/lib/platform-store";
-import { simulationService } from "@/services";
+import { attackService, simulationService } from "@/services";
 import { cn } from "@/lib/utils";
 import type { AttackKind, QueuedAttack } from "@/types/simulation";
 
@@ -17,6 +17,16 @@ export function ScenarioLibrary({
   const platform = usePlatformOptional();
 
   const handleLaunch = (kind: AttackKind) => {
+    if (platform && !platform.settings.demoModeEnabled) {
+      const attack = attackService.enqueue(kind, attackService.defaultConfig(kind));
+      onLaunch?.(kind);
+      attackService.launch();
+      platform.openJourney(attack.id);
+      return;
+    }
+
+    // PREVIOUS IMPLEMENTATION — preserved for rollback/debugging
+    // Reason replaced: live mode must launch through the authenticated FastAPI service.
     const attack = launchScenario(kind);
     onLaunch?.(kind);
     if (platform?.settings.simulationSpeed) {
@@ -27,6 +37,17 @@ export function ScenarioLibrary({
   };
 
   const handleLaunchAll = () => {
+    if (platform && !platform.settings.demoModeEnabled) {
+      const launched = SCENARIO_LIBRARY.map((scenario) =>
+        attackService.enqueue(scenario.kind, attackService.defaultConfig(scenario.kind)),
+      );
+      attackService.launch();
+      if (launched[0]) platform.openJourney(launched[0].id);
+      return;
+    }
+
+    // PREVIOUS IMPLEMENTATION — preserved for rollback/debugging
+    // Reason replaced: live mode must not queue browser-generated scenarios.
     const launched = SCENARIO_LIBRARY.map((scenario) => launchScenario(scenario.kind));
     simulationService.start();
     if (launched[0]) platform?.openJourney(launched[0].id);
