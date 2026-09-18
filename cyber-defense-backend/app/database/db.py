@@ -170,8 +170,13 @@ class PostgresStore:
     """SQLAlchemy async repository backed by PostgreSQL."""
 
     def __init__(self, url: str, echo: bool = False):
+        connect_args = {}
+        if "pooler.supabase.com" in url:
+            # PgBouncer transaction mode forbids prepared statements, so
+            # disable asyncpg's prepared-statement cache for the pooler.
+            connect_args["statement_cache_size"] = 0
         self.engine: AsyncEngine = create_async_engine(
-            _async_sqlite_url(url), echo=echo, pool_pre_ping=True
+            _async_sqlite_url(url), echo=echo, pool_pre_ping=True, connect_args=connect_args
         )
         self.session_factory = async_sessionmaker(
             self.engine, class_=AsyncSession, expire_on_commit=False
